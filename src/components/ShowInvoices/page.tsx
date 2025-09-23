@@ -162,21 +162,35 @@ const ShowInvoices = () => {
                   {new Date(q.date).toLocaleDateString()}
                 </p>
                 <p className="w-[80px] text-center">
-                  {q.discount.toFixed(2)} Rs
+                  {q.discount.toLocaleString("en-US", {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                  })}{" "}
+                  Rs
                 </p>
                 <p className="w-[100px] text-center">
-                  {q.amount.toFixed(2)} Rs
+                  {q.amount.toLocaleString("en-US", {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                  })}{" "}
+                  Rs
                 </p>
                 <p className="w-[100px] text-center">
                   {totalReceived > 0 ? (
-                    `${totalReceived.toFixed(2)} Rs`
+                    `${totalReceived.toLocaleString("en-US", {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2,
+                    })} Rs`
                   ) : (
                     <span className="text-red-400 font-semibold">Unpaid</span>
                   )}
                 </p>
                 <p className="w-[100px] text-center">
                   {balance > 0 ? (
-                    `${balance.toFixed(2)} Rs`
+                    `${balance.toLocaleString("en-US", {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2,
+                    })} Rs`
                   ) : (
                     <span className="text-green-400 font-semibold">Paid</span>
                   )}
@@ -220,7 +234,13 @@ const ShowInvoices = () => {
                   className="flex justify-between border-b py-1 text-sm"
                 >
                   <span>{new Date(p.date).toLocaleDateString()}</span>
-                  <span>{p.amount.toFixed(2)} Rs</span>
+                  <span>
+                    {p.amount.toLocaleString("en-US", {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    Rs
+                  </span>
                 </li>
               ))}
             </ul>
