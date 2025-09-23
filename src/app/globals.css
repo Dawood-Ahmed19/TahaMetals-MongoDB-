@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  --color-dashboardBg: #181820;
+  --color-BgColor: #1e1e2f;
+  --color-cardBg: #2d3142;
+  --color-fieldBg: #181b28;
+  --color-IconBg: #41465c;
+  --color-iconColor: #3b82f6;
+
+  --font-poppins: "Poppins", sans-serif;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #invoice-section,
+  #invoice-section * {
+    visibility: visible;
+  }
+
+  #invoice-section {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
