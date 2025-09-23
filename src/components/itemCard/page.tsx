@@ -7,38 +7,105 @@ import { useRouter } from "next/navigation";
 const GuageOptions = ["1.35", "1.1", "1.0", "0.9", "0.8", "0.7"];
 const GuageAdditionalOptions = ["0.6", "0.5", "0.4", "0.35", "0.3"];
 
-const SquareitemSizeOptions = [
-  `4" x 4"`,
-  `3" x 3"`,
-  `2" x 2"`,
-  `1 - 1/2" x 1 - 1/2"`,
-  `1 - 1/4" x 1 - 1/4"`,
-  `1" x 1"`,
+const BandSizeOptions = [
+  '1/2"',
+  '5/8"',
+  '3/4"',
+  '1"',
+  '1-1/4"',
+  '1-1/2"',
+  '2"',
+  '2-1/2"',
+  '3"',
+  '4"',
 ];
 
-const additionalSquareItemSizeOptions = [
-  `3/4" x 3/4"`,
-  `1/2" x 1/2"`,
-  `1 - 1/2" x 3"`,
-  `1" x 2"`,
-  `1" x 1 - 1/2"`,
-  `3/4" x 1 - 1/2"`,
-  `1/2" x 1 - 1/2"`,
-  `1/2" x 1"`,
-  `3/4" x 3/8"`,
+const SquareItemSizeOptions = [
+  '4" x 4"',
+  '3" x 3"',
+  '2" x 2"',
+  '1-1/2" x 1-1/2"',
+  '1-1/4" x 1-1/4"',
+  '1" x 1"',
 ];
 
-const RounditemSizeOptions = [
-  `4"`,
-  `3"`,
-  `2 - 1/2"`,
-  `2"`,
-  `1 - 1/2"`,
-  `1 - 1/4"`,
-  `1"`,
+const AdditionalSquareItemSizeOptions = [
+  '3/4" x 3/4"',
+  '1/2" x 1/2"',
+  '1-1/2" x 3"',
+  '1" x 2"',
+  '1" x 1-1/2"',
+  '3/4" x 1-1/2"',
+  '1/2" x 1-1/2"',
+  '1/2" x 1"',
+  '3/4" x 3/8"',
 ];
 
-const additionalRoundItemSizeOptions = [`3/4"`, `5/8"`, `1/2"`, `3/8"`];
+const RoundItemSizeOptions = [
+  '4"',
+  '3"',
+  '2-1/2"',
+  '2"',
+  '1-1/2"',
+  '1-1/4"',
+  '1"',
+];
+
+const AdditionalRoundItemSizeOptions = ['3/4"', '5/8"', '1/2"', '3/8"'];
+
+const HardwareItemNameOptions = [
+  "Plate",
+  "Basecup",
+  "Cutt Ball",
+  "Band",
+  "Draz",
+  "Rod",
+];
+
+const PlateSizeRoundOptions = [
+  '2" x 4"',
+  '3" x 5"',
+  '1-1/2" x 3"',
+  '3"',
+  '3-1/2"',
+  '4"',
+  '5"',
+  '1/2" x 2"',
+  '1/2" x 1-1/2"',
+];
+
+const PlateSizeSquareOptions = [
+  '1/2" x 1-1/2" x 1-1/2"',
+  '1/2" x 2" x 1"',
+  '1/2" x 3" x 3"',
+  '1/2" x 2" x 2"',
+];
+
+const BasecupSizeRoundOptions = [
+  '1/2" x 2"',
+  '1/2" x 1-1/2"',
+  '5/8" x 1-1/2"',
+  '3/4" x 3"',
+  '2" x 4"',
+  '1-1/2" x 3"',
+  '1" x 3"',
+  '1-1/4" x 3"',
+  '3" x 5"',
+  '4" x 6"',
+  '2-1/2" x 5"',
+];
+
+const BasecupSizeSquareOptions = [
+  '3/4" x 3/4" x 3"',
+  '1" x 1" x 3"',
+  '1-1/4" x 1-1/4" x 3"',
+  '1-1/2" x 1-1/2" x 4"',
+  '2" x 2" x 4"',
+  '3" x 3" x 5"',
+  '1" x 1-1/2" x 4"',
+  '1" x 2" x 4"',
+  '4" x 4" x 6"',
+];
 
 interface ItemCardProps {
   initialData?: {
@@ -50,7 +117,8 @@ interface ItemCardProps {
     gote?: number | string;
     size: string;
     weight: number;
-    price: number;
+    pricePerKg?: number;
+    pricePerUnit?: number;
     quantity: number;
     height?: number | string;
     date: string;
@@ -90,7 +158,9 @@ export default function ItemCard({ initialData }: ItemCardProps) {
         weight: String(initialData.weight ?? ""),
         guage: initialData.guage != null ? String(initialData.guage) : "",
         gote: initialData.gote != null ? String(initialData.gote) : "",
-        price: String(initialData.price ?? ""),
+        price: initialData.pricePerUnit
+          ? String(initialData.pricePerUnit)
+          : String(initialData.pricePerKg ?? ""),
         stock: String(initialData.quantity ?? ""),
         height: initialData.height != null ? String(initialData.height) : "",
       }));
@@ -98,6 +168,12 @@ export default function ItemCard({ initialData }: ItemCardProps) {
   }, [initialData]);
 
   const isPillars = formData.itemType === "Pillars";
+  const isHardwarePlate =
+    formData.itemType === "Hardware" && formData.itemName === "Plate";
+  const isHardwareBasecup =
+    formData.itemType === "Hardware" && formData.itemName === "Basecup";
+  const isHardwareBand =
+    formData.itemType === "Hardware" && formData.itemName === "Band";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,28 +187,34 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       (isPipe && !formData.pipeType) ||
       (isPillars && !formData.pipeType) ||
       (isHardware && !formData.itemName) ||
+      ((isHardwarePlate || isHardwareBasecup) && !formData.pipeType) ||
       !formData.itemSize ||
       !formData.stock ||
       !formData.price ||
-      (isPillars ? !formData.gote : !formData.guage)
+      (isPillars ? !formData.gote : !formData.guage && !isHardware)
     ) {
       alert("Please fill all required fields before submitting.");
       return;
     }
 
-    const newItem = {
+    const newItem: any = {
       name: formData.itemName,
       type: formData.itemType,
       pipeType: formData.pipeType,
       size: formData.itemSize,
       guage: formData.guage,
       gote: formData.gote,
-      weight: Number(formData.weight),
-      price: Number(formData.price),
       quantity: Number(formData.stock),
       height: formData.height,
       date: new Date().toISOString(),
     };
+
+    if (isHardwareBand) {
+      newItem.pricePerUnit = Number(formData.price); // ✅ save per-unit
+    } else {
+      newItem.pricePerKg = Number(formData.price); // ✅ save per-kg
+      newItem.weight = Number(formData.weight);
+    }
 
     setIsLoading(true);
 
@@ -158,9 +240,38 @@ export default function ItemCard({ initialData }: ItemCardProps) {
   };
 
   const computedGuageOptions =
-    formData.pipeType === "Round" && formData.itemSize === `1"`
+    formData.pipeType === "Round" && formData.itemSize === '1"'
       ? [...GuageOptions, ...GuageAdditionalOptions]
       : GuageOptions;
+
+  const pipeTypeFieldForPipeAndPillars = {
+    label: "Pipe Type",
+    value: formData.pipeType,
+    type: "select",
+    options:
+      formData.itemType === "Pipe"
+        ? ["Round", "Square"]
+        : ["Round", "Square", "Fancy"],
+    onChange: (value: string) =>
+      setFormData((prev) => ({
+        ...prev,
+        pipeType: value,
+        itemSize: "",
+      })),
+  };
+
+  const hardwareTypeField = {
+    label: formData.itemType === "Hardware" ? "Hardware Type" : "Pipe Type",
+    value: formData.pipeType,
+    type: "select",
+    options: ["Round", "Square"],
+    onChange: (value: string) =>
+      setFormData((prev) => ({
+        ...prev,
+        pipeType: value,
+        itemSize: "",
+      })),
+  };
 
   const fields: any[] = [
     {
@@ -177,39 +288,35 @@ export default function ItemCard({ initialData }: ItemCardProps) {
           guage: "",
           gote: "",
           height: "",
+          itemName: "",
         })),
     },
     ...(formData.itemType === "Pipe" || formData.itemType === "Pillars"
+      ? [pipeTypeFieldForPipeAndPillars]
+      : []),
+    ...(formData.itemType !== "Pipe"
       ? [
           {
-            label: "Pipe Type",
-            value: formData.pipeType,
-            type: "select",
+            label: "Item Name",
+            value: formData.itemName,
+            type: formData.itemType === "Hardware" ? "select" : "text",
             options:
-              formData.itemType === "Pipe"
-                ? ["Round", "Square"]
-                : ["Round", "Square", "Fancy"],
+              formData.itemType === "Hardware" ? HardwareItemNameOptions : [],
+            placeholder:
+              formData.itemType === "Hardware"
+                ? "Select Item Name"
+                : "Enter Item Name",
             onChange: (value: string) =>
               setFormData((prev) => ({
                 ...prev,
-                pipeType: value,
+                itemName: value,
+                pipeType: "",
                 itemSize: "",
               })),
           },
         ]
       : []),
-    ...(formData.itemType === "Pipe"
-      ? []
-      : [
-          {
-            label: "Item Name",
-            value: formData.itemName,
-            placeholder: "Enter Item Name",
-            type: "text",
-            onChange: (value: string) =>
-              setFormData((prev) => ({ ...prev, itemName: value })),
-          },
-        ]),
+    ...(isHardwarePlate || isHardwareBasecup ? [hardwareTypeField] : []),
     {
       label: "Item Size",
       value: formData.itemSize,
@@ -217,13 +324,23 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       options:
         formData.itemType === "Pipe"
           ? formData.pipeType === "Round"
-            ? [...RounditemSizeOptions, ...additionalRoundItemSizeOptions]
+            ? [...RoundItemSizeOptions, ...AdditionalRoundItemSizeOptions]
             : formData.pipeType === "Square"
-            ? [...SquareitemSizeOptions, ...additionalSquareItemSizeOptions]
+            ? [...SquareItemSizeOptions, ...AdditionalSquareItemSizeOptions]
             : []
+          : isHardwarePlate
+          ? formData.pipeType === "Round"
+            ? PlateSizeRoundOptions
+            : PlateSizeSquareOptions
+          : isHardwareBasecup
+          ? formData.pipeType === "Round"
+            ? BasecupSizeRoundOptions
+            : BasecupSizeSquareOptions
+          : isHardwareBand
+          ? BandSizeOptions
           : formData.pipeType === "Round"
-          ? RounditemSizeOptions
-          : SquareitemSizeOptions,
+          ? RoundItemSizeOptions
+          : SquareItemSizeOptions,
       onChange: (value: string) =>
         setFormData((prev) => ({ ...prev, itemSize: value })),
     },
@@ -240,12 +357,10 @@ export default function ItemCard({ initialData }: ItemCardProps) {
           {
             label: "Height (ft)",
             value: formData.height,
-            placeholder: "Enter pillar height",
-            onChange: (value: string) =>
-              setFormData((prev) => ({ ...prev, height: value })),
           },
         ]
-      : [
+      : formData.itemType !== "Hardware"
+      ? [
           {
             label: "Guage",
             value: formData.guage,
@@ -255,27 +370,40 @@ export default function ItemCard({ initialData }: ItemCardProps) {
               setFormData((prev) => ({ ...prev, guage: value })),
             hidden: !formData.itemSize,
           },
+        ]
+      : []),
+    ...(isHardwareBand
+      ? [
+          {
+            label: "Price Per Unit (PKR)", // ✅ clear per-unit field
+            value: formData.price,
+            placeholder: "Enter per-item price",
+            onChange: (value: string) =>
+              setFormData((prev) => ({ ...prev, price: value })),
+          },
+        ]
+      : [
+          {
+            label: "Price Per Kg (PKR)",
+            value: formData.price,
+            placeholder: "Enter price per kg",
+            onChange: (value: string) =>
+              setFormData((prev) => ({ ...prev, price: value })),
+          },
+          {
+            label: "Weight (KG)",
+            value: formData.weight,
+            placeholder: "Enter weight in KG",
+            onChange: (value: string) =>
+              setFormData((prev) => ({ ...prev, weight: value })),
+          },
         ]),
-    {
-      label: "Price Per Kg (PKR)",
-      value: formData.price,
-      placeholder: "Put price here",
-      onChange: (value: string) =>
-        setFormData((prev) => ({ ...prev, price: value })),
-    },
     {
       label: "Total Stock",
       value: formData.stock,
       placeholder: "Total Stock value here",
       onChange: (value: string) =>
         setFormData((prev) => ({ ...prev, stock: value })),
-    },
-    {
-      label: "Weight (KG)",
-      value: formData.weight,
-      placeholder: "Type item Weight here",
-      onChange: (value: string) =>
-        setFormData((prev) => ({ ...prev, weight: value })),
     },
   ];
 
@@ -284,7 +412,6 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       <h1 className="font-bold text-base text-white">
         {initialData ? "Edit Item" : "Add Item"}
       </h1>
-
       <div className="grid grid-cols-2 gap-6">
         {fields
           .filter((field) => !(field.hidden === true))
@@ -292,7 +419,6 @@ export default function ItemCard({ initialData }: ItemCardProps) {
             <FormField key={field.label} {...field} />
           ))}
       </div>
-
       <div className="flex justify-center mt-8">
         <button
           onClick={handleSubmit}

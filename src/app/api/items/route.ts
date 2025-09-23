@@ -82,17 +82,33 @@ export async function POST(req: Request) {
     });
 
     if (existingItem) {
-      // ✅ Increment only quantity + update date
+      const addedQty = Number(normalized.quantity ?? 0);
+
+      // calculate unit weight
+      const unitWeight =
+        existingItem.quantity > 0
+          ? existingItem.weight / existingItem.quantity
+          : 0;
+
+      const newQuantity = existingItem.quantity + addedQty;
+      const newWeight = unitWeight * newQuantity;
+
       const result = await collection.updateOne(
         { _id: existingItem._id },
         {
-          $inc: { quantity: Number(normalized.quantity ?? 0) },
-          $set: { date: new Date().toISOString() },
+          $set: {
+            quantity: newQuantity,
+            weight: newWeight,
+            date: new Date().toISOString(),
+          },
         }
       );
 
       return NextResponse.json(
-        { success: result.modifiedCount > 0, item: existingItem },
+        {
+          success: result.modifiedCount > 0,
+          item: { ...existingItem, quantity: newQuantity, weight: newWeight },
+        },
         { status: 200 }
       );
     }

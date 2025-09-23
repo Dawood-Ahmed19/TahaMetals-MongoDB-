@@ -11,10 +11,11 @@ export interface Item {
   type: string;
   gote: number | string;
   guage: number | string;
-  size: number;
-  weight: number;
+  size: number | string;
+  weight?: number;
   quantity: number;
-  price: number;
+  pricePerKg?: number;
+  pricePerUnit?: number;
   date: string;
 }
 
@@ -30,9 +31,8 @@ export default function InventoryCard() {
     const fetchItems = async () => {
       try {
         const res = await fetch("/api/items");
-        if (!res.ok) {
-          throw new Error("Failed to fetch items");
-        }
+        if (!res.ok) throw new Error("Failed to fetch items");
+
         const data = await res.json();
         setItems(data.items || []);
       } catch (err) {
@@ -44,14 +44,11 @@ export default function InventoryCard() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    console.log("handleDelete called with:", id);
     if (!window.confirm("Are you sure you want to delete this item?")) return;
 
     try {
       const res = await fetch(`/api/items/${id}`, { method: "DELETE" });
       const data = await res.json();
-
-      console.log("DELETE response:", res.status, data);
 
       if (res.ok && data?.success) {
         setItems((prev) => prev.filter((item) => item._id !== id));
@@ -87,22 +84,37 @@ export default function InventoryCard() {
           <p>Weight (KG)</p>
           <p>Quantity Available</p>
           <p>Price Per KG (PKR)</p>
-          <p>Price Per unit (PKR)</p>
+          <p>Price Per Unit (PKR)</p>
           <p>Actions</p>
           <p>Date</p>
         </span>
 
         {filteredItems.map((item) => {
-          const unitPrice =
-            item.quantity > 0
-              ? ((item.weight / item.quantity) * item.price).toFixed(2)
-              : "0";
+          let pricePerKg: string | number;
+          let unitPrice: string | number;
+
+          if (item.type === "hardware" && item.name.toLowerCase() === "band") {
+            // ✅ Special case for Band
+            pricePerKg = "NaN"; // nothing for Kg
+            unitPrice = item.pricePerUnit ?? 0; // read from DB
+          } else {
+            // ✅ Everything else uses per Kg logic
+            pricePerKg = item.pricePerKg ?? 0;
+            unitPrice =
+              item.quantity > 0
+                ? (
+                    ((item.weight ?? 0) / item.quantity) *
+                    (item.pricePerKg ?? 0)
+                  ).toFixed(2)
+                : "0";
+          }
 
           return (
             <InventoryItem
               key={item._id}
               {...item}
-              unitPrice={Number(unitPrice)}
+              pricePerKg={pricePerKg}
+              unitPrice={unitPrice}
               onDelete={handleDelete}
             />
           );

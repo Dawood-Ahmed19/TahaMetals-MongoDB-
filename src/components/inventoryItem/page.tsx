@@ -11,11 +11,11 @@ interface InventoryItemsProps {
   type: string;
   gote: number | string;
   guage: number | string;
-  size: number;
-  weight: number;
+  size: number | string;
+  weight?: number;
   quantity: number;
-  price: number;
-  unitPrice: number;
+  pricePerKg?: number | string;
+  unitPrice: number | string;
   date: string;
   onDelete: (id: string) => void;
 }
@@ -29,15 +29,25 @@ export default function InventoryItem({
   size,
   weight,
   quantity,
-  price,
+  pricePerKg,
   unitPrice,
   date,
   onDelete,
 }: InventoryItemsProps) {
   const router = useRouter();
+  const isBand =
+    type.toLowerCase() === "hardware" && name.toLowerCase() === "band";
 
   const handleEditItem = () => {
     router.push(`/Inventory/edit/${_id}`);
+  };
+
+  // 🎯 Helper: red if "N/A"
+  const renderValue = (value: any) => {
+    if (value === "N/A") {
+      return <span className="text-red-500 font-semibold">{value}</span>;
+    }
+    return value;
   };
 
   return (
@@ -47,10 +57,20 @@ export default function InventoryItem({
     >
       <p>{name}</p>
       <p>{type}</p>
-      <p>{guage}</p>
-      <p>{gote}</p>
+      <p>{renderValue(guage || "N/A")}</p>
+      <p>{renderValue(gote || "N/A")}</p>
       <p>{size}</p>
-      <p>{Number(weight).toFixed(2)}</p>
+
+      {/* ✅ Weight */}
+      <p>
+        {isBand
+          ? renderValue("N/A")
+          : weight !== undefined
+          ? Number(weight).toFixed(2)
+          : renderValue("N/A")}
+      </p>
+
+      {/* ✅ Quantity */}
       <p>
         {quantity === 0 ? (
           <span className="text-red-500 font-semibold">Out of Stock</span>
@@ -58,8 +78,13 @@ export default function InventoryItem({
           quantity
         )}
       </p>
-      <p>{price} PKR</p>
+
+      {/* ✅ Price Per Kg */}
+      <p>{isBand ? renderValue("N/A") : `${pricePerKg ?? 0} PKR`}</p>
+
+      {/* ✅ Price Per Unit */}
       <p>{unitPrice} PKR</p>
+
       <div className="flex gap-2">
         <button
           onClick={handleEditItem}
@@ -72,16 +97,14 @@ export default function InventoryItem({
         </button>
         <button
           type="button"
-          onClick={() => {
-            console.log("Delete clicked:", _id);
-            onDelete(_id);
-          }}
+          onClick={() => onDelete(_id)}
           className="hover:cursor-pointer"
           disabled={quantity === 0}
         >
           <FontAwesomeIcon icon={faTrash} />
         </button>
       </div>
+
       <p>{new Date(date).toLocaleDateString()}</p>
     </div>
   );

@@ -16,10 +16,11 @@ type QuotationRow = {
 
 interface InventoryItem {
   name: string;
-  weight: number;
-  rate: number;
+  type: string; // 👈 important for branching
+  weight?: number; // total stock weight (per Kg items only)
   quantity: number;
-  price: number;
+  pricePerKg?: number; // per Kg items (pipe, plate)
+  pricePerUnit?: number; // Bands
 }
 
 const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
@@ -62,7 +63,103 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   const grandTotal = total - discount;
   const balance = grandTotal - received;
 
-  // ========== Save Quotation ==============
+  // =================== HELPERS ===================
+  const calculateRow = (selected: InventoryItem, qty: number) => {
+    // Default values
+    let weight = 0;
+    let rate = 0;
+    let amount = 0;
+
+    // ✅ Band: per-unit, no weight
+    if (
+      selected.type === "hardware" &&
+      selected.name.toLowerCase() === "band"
+    ) {
+      weight = 0;
+      rate = selected.pricePerUnit ?? 0;
+      amount = qty * rate;
+    }
+    // ✅ Normal: per-Kg
+    else {
+      const singlePieceWeight =
+        selected.quantity > 0 ? (selected.weight ?? 0) / selected.quantity : 0;
+
+      const sellingPricePerKg = (selected.pricePerKg ?? 0) + 10; // markup +10
+      const unitPrice = singlePieceWeight * sellingPricePerKg;
+
+      weight = qty * singlePieceWeight;
+      rate = unitPrice;
+      amount = qty * rate;
+    }
+
+    return { weight, rate, amount };
+  };
+
+  // =================== HandleChange ===================
+  const handleChange = (
+    index: number,
+    field: keyof QuotationRow,
+    value: any
+  ) => {
+    const newRows = [...rows];
+    let numValue = Number(value);
+    if (isNaN(numValue) || numValue < 0) numValue = 0;
+
+    if (field === "item") {
+      const selected = inventoryItems.find((inv) => inv.name === value);
+
+      if (selected) {
+        const qty = 1;
+        const { weight, rate, amount } = calculateRow(selected, qty);
+
+        newRows[index] = {
+          ...newRows[index],
+          item: value,
+          qty,
+          weight,
+          rate,
+          amount,
+        };
+      } else {
+        newRows[index] = { ...newRows[index], item: value };
+      }
+    } else if (field === "qty") {
+      const selected = inventoryItems.find(
+        (inv) => inv.name === newRows[index].item
+      );
+
+      if (selected) {
+        if (numValue > selected.quantity) {
+          numValue = selected.quantity;
+          alert(`Only ${selected.quantity} units available in stock!`);
+        }
+
+        newRows[index] = { ...newRows[index], qty: numValue };
+
+        if (numValue > 0) {
+          const { weight, rate, amount } = calculateRow(selected, numValue);
+          newRows[index].weight = weight;
+          newRows[index].rate = rate;
+          newRows[index].amount = amount;
+        } else {
+          newRows[index].weight = 0;
+          newRows[index].rate = 0;
+          newRows[index].amount = 0;
+        }
+      } else {
+        newRows[index].qty = numValue;
+      }
+    } else {
+      newRows[index] = { ...newRows[index], [field]: numValue };
+      const qty = Number(newRows[index].qty) || 0;
+      const rate = Number(newRows[index].rate) || 0;
+      newRows[index].amount = qty * rate;
+    }
+
+    setRows(newRows);
+  };
+
+  // =================== Save Quotation ===================
   const saveQuotation = async () => {
     const validRows = rows.filter((r) => r.item && r.qty && r.rate);
 
@@ -107,92 +204,14 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     }
   };
 
-  // =================== HandleChange Function ===================
-  const handleChange = (
-    index: number,
-    field: keyof QuotationRow,
-    value: any
-  ) => {
-    const newRows = [...rows];
-    let numValue = Number(value);
-    if (isNaN(numValue) || numValue < 0) numValue = 0;
-
-    if (field === "item") {
-      const selected = inventoryItems.find((inv) => inv.name === value);
-
-      if (selected) {
-        const singlePieceWeight =
-          selected.quantity > 0 ? selected.weight / selected.quantity : 0;
-        const sellingPricePerKg = selected.price + 10;
-        const unitPrice = singlePieceWeight * sellingPricePerKg;
-        const qty = 1;
-        const weight = qty * singlePieceWeight;
-        const rate = qty * unitPrice;
-        const amount = rate;
-
-        newRows[index] = {
-          ...newRows[index],
-          item: value,
-          qty,
-          weight,
-          rate,
-          amount,
-        };
-      } else {
-        newRows[index] = { ...newRows[index], item: value };
-      }
-    } else if (field === "qty") {
-      const selected = inventoryItems.find(
-        (inv) => inv.name === newRows[index].item
-      );
-
-      if (selected) {
-        if (numValue > selected.quantity) {
-          numValue = selected.quantity;
-          alert(`Only ${selected.quantity} units available in stock!`);
-        }
-
-        newRows[index] = { ...newRows[index], qty: numValue };
-
-        if (numValue > 0) {
-          const singlePieceWeight =
-            selected.quantity > 0 ? selected.weight / selected.quantity : 0;
-          const sellingPricePerKg = selected.price + 10;
-          const unitPrice = singlePieceWeight * sellingPricePerKg;
-          const weight = numValue * singlePieceWeight;
-          const rate = numValue * unitPrice;
-          const amount = rate;
-
-          newRows[index].weight = weight;
-          newRows[index].rate = rate;
-          newRows[index].amount = amount;
-        } else {
-          newRows[index].weight = 0;
-          newRows[index].rate = 0;
-          newRows[index].amount = 0;
-        }
-      } else {
-        newRows[index].qty = numValue;
-      }
-    } else {
-      newRows[index] = { ...newRows[index], [field]: numValue };
-      const qty = Number(newRows[index].qty) || 0;
-      const rate = Number(newRows[index].rate) || 0;
-      newRows[index].amount = qty * rate;
-    }
-
-    setRows(newRows);
-  };
-
+  // =================== PDF Generation ===================
   const handleDownloadPDF = async () => {
     try {
       setIsGeneratingPdf(true);
-
       const doc = new jsPDF({ unit: "pt", format: "a4" });
 
-      const brandX = 40;
-      const brandY = 30;
-
+      const brandX = 40,
+        brandY = 30;
       doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(253, 186, 116);
@@ -200,7 +219,6 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       const tahaWidth = (doc as any).getTextWidth("Taha");
       doc.setTextColor(0, 0, 0);
       doc.text("Metals", brandX + tahaWidth + 6, brandY);
-
       doc.setFontSize(11);
       doc.setFont("helvetica", "normal");
       doc.text("Invoice / Quotation", brandX, brandY + 18);
@@ -212,17 +230,16 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       const rightX = pageWidth - 50;
       const today = new Date().toLocaleDateString();
       doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
       doc.text(`Date: ${today}`, rightX, brandY, { align: "right" });
 
       if (quotationId) {
         doc.setFontSize(9);
         doc.setFont("helvetica", "bold");
-        doc.setTextColor(107, 114, 128); // gray-500
+        doc.setTextColor(107, 114, 128);
         doc.text(`Quotation ID: ${quotationId}`, rightX, brandY + 15, {
           align: "right",
         });
-        doc.setTextColor(0, 0, 0); // reset to black for rest
+        doc.setTextColor(0, 0, 0);
       }
 
       const head = [["Qty", "Item", "Weight", "Rate", "Amount"]];
@@ -236,11 +253,10 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
           Number.isNaN(Number(r.amount)) ? "0.00" : Number(r.amount).toFixed(2),
         ]);
 
-      const startY = 100;
       (autoTable as any)(doc, {
         head,
         body,
-        startY,
+        startY: 100,
         theme: "striped",
         styles: { fontSize: 10 },
         headStyles: { fillColor: [45, 55, 72], textColor: 255 },
@@ -248,35 +264,17 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       });
 
       const finalY = (doc as any).lastAutoTable.finalY + 20;
-
-      // Totals block on right
-      doc.setFontSize(11);
       const rightXTotal = pageWidth - 160;
-
+      doc.setFontSize(11);
+      doc.text(`TOTAL: ${total.toFixed(2)}`, rightXTotal, finalY);
+      doc.text(`DISCOUNT: ${discount.toFixed(2)}`, rightXTotal, finalY + 16);
+      doc.text(`BALANCE: ${balance.toFixed(2)}`, rightXTotal, finalY + 32);
       doc.text(
-        `TOTAL: ${Number.isNaN(total) ? "0.00" : total.toFixed(2)}`,
-        rightXTotal,
-        finalY
-      );
-      doc.text(
-        `DISCOUNT: ${Number.isNaN(discount) ? "0.00" : discount.toFixed(2)}`,
-        rightXTotal,
-        finalY + 16
-      );
-      doc.text(
-        `BALANCE: ${Number.isNaN(balance) ? "0.00" : balance.toFixed(2)}`,
-        rightXTotal,
-        finalY + 32
-      );
-      doc.text(
-        `GRAND TOTAL: ${
-          Number.isNaN(grandTotal) ? "0.00" : grandTotal.toFixed(2)
-        }`,
+        `GRAND TOTAL: ${grandTotal.toFixed(2)}`,
         rightXTotal,
         finalY + 48
       );
 
-      // Footer
       doc.setFontSize(10);
       doc.text(
         "Thank you for Purchasing!",
@@ -289,7 +287,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       }.pdf`;
       doc.save(filename);
 
-      // Reset all fields after successful PDF generation
+      // Reset
       setRows(
         Array.from({ length: 14 }, () => ({
           qty: 0,
@@ -384,7 +382,6 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                         : ""
                     }
                     readOnly
-                    onChange={(e) => handleChange(i, "weight", e.target.value)}
                     className="bg-transparent text-center w-full outline-none"
                   />
                 </td>
@@ -416,10 +413,9 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
               <td colSpan={3} />
               <td className="border border-white text-center">TOTAL</td>
               <td className="border border-white text-center">
-                {Number.isNaN(total) ? "0" : total.toFixed(2)}
+                {total.toFixed(2)}
               </td>
             </tr>
-
             <tr className="bg-gray-800 font-bold">
               <td colSpan={3} />
               <td className="border border-white text-center">DISCOUNT</td>
@@ -428,20 +424,11 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                   type="number"
                   min={0}
                   value={discount}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    const parsedValue = value === "" ? 0 : parseFloat(value);
-                    setDiscount(
-                      Number.isNaN(parsedValue)
-                        ? 0
-                        : parseFloat(parsedValue.toFixed(2))
-                    );
-                  }}
+                  onChange={(e) => setDiscount(Number(e.target.value) || 0)}
                   className="bg-transparent text-center w-full outline-none"
                 />
               </td>
             </tr>
-
             <tr className="bg-gray-800 font-bold">
               <td colSpan={3} />
               <td className="border border-white text-center">RECEIVED</td>
@@ -450,33 +437,23 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                   type="number"
                   min={0}
                   value={received}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    const parsedValue = value === "" ? 0 : parseFloat(value);
-                    setReceived(
-                      Number.isNaN(parsedValue)
-                        ? 0
-                        : parseFloat(parsedValue.toFixed(2))
-                    );
-                  }}
+                  onChange={(e) => setReceived(Number(e.target.value) || 0)}
                   className="bg-transparent text-center w-full outline-none"
                 />
               </td>
             </tr>
-
             <tr className="bg-gray-800 font-bold">
               <td colSpan={3} />
               <td className="border border-white text-center">BALANCE</td>
               <td className="border border-white text-center">
-                {Number.isNaN(balance) ? "0.00" : balance.toFixed(2)}
+                {balance.toFixed(2)}
               </td>
             </tr>
-
             <tr className="bg-gray-800 font-bold">
               <td colSpan={3} />
               <td className="border border-white text-center">GRAND TOTAL</td>
               <td className="border border-white text-center">
-                {Number.isNaN(grandTotal) ? "0.00" : grandTotal.toFixed(2)}
+                {grandTotal.toFixed(2)}
               </td>
             </tr>
           </tbody>
@@ -490,7 +467,6 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         >
           Save
         </button>
-
         <button
           onClick={handleDownloadPDF}
           disabled={isGeneratingPdf || !quotationId}
