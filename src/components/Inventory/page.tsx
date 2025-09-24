@@ -9,6 +9,7 @@ export interface Item {
   _id: string;
   name: string;
   type: string;
+  color?: string;
   gote: number | string;
   guage: number | string;
   size: number | string;
@@ -78,43 +79,51 @@ export default function InventoryCard() {
         >
           <p>Item name</p>
           <p>Item type</p>
+          <p>Color</p>
           <p>Gauge</p>
           <p>Gote</p>
           <p>Size</p>
           <p>Weight (KG)</p>
           <p>Quantity Available</p>
-          <p>Price Per KG (PKR)</p>
-          <p>Price Per Unit (PKR)</p>
+          <p>Price Per KG</p>
+          <p>Price Per Unit</p>
           <p>Actions</p>
           <p>Date</p>
         </span>
 
         {filteredItems.map((item) => {
-          let pricePerKg: string | number;
-          let unitPrice: string | number;
+          let pricePerKg: string | number | undefined;
+          let unitPrice: string | number | undefined;
 
-          if (item.type === "hardware" && item.name.toLowerCase() === "band") {
-            // ✅ Special case for Band
-            pricePerKg = "NaN"; // nothing for Kg
-            unitPrice = item.pricePerUnit ?? 0; // read from DB
+          if (
+            item.type?.toLowerCase() === "hardware" &&
+            (item.name?.toLowerCase() === "band" ||
+              item.name?.toLowerCase() === "cutt ball")
+          ) {
+            pricePerKg = "N/A";
+            unitPrice = item.pricePerUnit ?? "N/A";
           } else {
-            // ✅ Everything else uses per Kg logic
-            pricePerKg = item.pricePerKg ?? 0;
+            pricePerKg = item.pricePerKg ?? "N/A";
             unitPrice =
-              item.quantity > 0
+              item.quantity > 0 && item.pricePerKg
                 ? (
                     ((item.weight ?? 0) / item.quantity) *
                     (item.pricePerKg ?? 0)
                   ).toFixed(2)
-                : "0";
+                : "N/A";
           }
+
+          const colorValue =
+            item.color && item.color.trim() !== "" ? item.color : "N/A";
 
           return (
             <InventoryItem
               key={item._id}
               {...item}
+              color={colorValue}
               pricePerKg={pricePerKg}
               unitPrice={unitPrice}
+              weight={item.weight}
               onDelete={handleDelete}
             />
           );

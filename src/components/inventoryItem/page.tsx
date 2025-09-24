@@ -9,13 +9,14 @@ interface InventoryItemsProps {
   _id: string;
   name: string;
   type: string;
-  gote: number | string;
-  guage: number | string;
-  size: number | string;
-  weight?: number;
+  color?: string | null;
+  gote?: number | string | null;
+  guage?: number | string | null;
+  size?: number | string | null;
+  weight?: number | null;
   quantity: number;
-  pricePerKg?: number | string;
-  unitPrice: number | string;
+  pricePerKg?: number | string | null;
+  unitPrice?: number | string | null;
   date: string;
   onDelete: (id: string) => void;
 }
@@ -24,6 +25,7 @@ export default function InventoryItem({
   _id,
   name,
   type,
+  color,
   gote,
   guage,
   size,
@@ -35,55 +37,59 @@ export default function InventoryItem({
   onDelete,
 }: InventoryItemsProps) {
   const router = useRouter();
-  const isBand =
-    type.toLowerCase() === "hardware" && name.toLowerCase() === "band";
 
   const handleEditItem = () => {
     router.push(`/Inventory/edit/${_id}`);
   };
 
-  // 🎯 Helper: red if "N/A"
-  const renderValue = (value: any) => {
-    if (value === "N/A") {
-      return <span className="text-red-500 font-semibold">{value}</span>;
+  // ✅ Universal formatter for missing/invalid values
+  const renderValue = (value: any, suffix?: string) => {
+    if (
+      value === "N/A" ||
+      value === "" ||
+      value === null ||
+      value === undefined ||
+      value === 0 ||
+      value === "0" ||
+      Number.isNaN(value)
+    ) {
+      return <span className="text-gray-600 font-semibold">N/A</span>;
     }
-    return value;
+    return suffix ? `${value} ${suffix}` : value;
   };
+
+  // Special handling for "band" in hardware
+  const isBand =
+    type?.toLowerCase() === "hardware" && name?.toLowerCase() === "band";
 
   return (
     <div
       className={`${inventoryGridCols} px-[120px] py-[20px] border-b border-gray-800 text-xs items-center
   ${quantity === 0 ? "bg-gray-700 text-gray-400" : "bg-fieldBg text-white"}`}
     >
-      <p>{name}</p>
-      <p>{type}</p>
-      <p>{renderValue(guage || "N/A")}</p>
-      <p>{renderValue(gote || "N/A")}</p>
-      <p>{size}</p>
+      <p>{renderValue(name)}</p>
+      <p>{renderValue(type)}</p>
+      <p>{renderValue(color)}</p>
+      <p>{renderValue(guage)}</p>
+      <p>{renderValue(gote)}</p>
+      <p>{renderValue(size)}</p>
 
-      {/* ✅ Weight */}
       <p>
         {isBand
           ? renderValue("N/A")
-          : weight !== undefined
-          ? Number(weight).toFixed(2)
-          : renderValue("N/A")}
+          : renderValue(weight ? Number(weight).toFixed(2) : "N/A", "KG")}
       </p>
 
-      {/* ✅ Quantity */}
       <p>
         {quantity === 0 ? (
           <span className="text-red-500 font-semibold">Out of Stock</span>
         ) : (
-          quantity
+          renderValue(quantity)
         )}
       </p>
 
-      {/* ✅ Price Per Kg */}
-      <p>{isBand ? renderValue("N/A") : `${pricePerKg ?? 0} PKR`}</p>
-
-      {/* ✅ Price Per Unit */}
-      <p>{unitPrice} PKR</p>
+      <p>{isBand ? renderValue("N/A") : renderValue(pricePerKg, "PKR")}</p>
+      <p>{renderValue(unitPrice, "PKR")}</p>
 
       <div className="flex gap-2">
         <button
@@ -105,7 +111,7 @@ export default function InventoryItem({
         </button>
       </div>
 
-      <p>{new Date(date).toLocaleDateString()}</p>
+      <p>{renderValue(new Date(date).toLocaleDateString())}</p>
     </div>
   );
 }

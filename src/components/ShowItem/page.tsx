@@ -6,7 +6,7 @@ interface Item {
   _id: string;
   name: string;
   quantity: number;
-  weight: number;
+  weight?: number | null;
 }
 
 const ShowItem = () => {
@@ -39,6 +39,13 @@ const ShowItem = () => {
     );
   }
 
+  const renderWeight = (weight?: number | null) => {
+    if (weight === null || weight === undefined || isNaN(weight)) {
+      return <span className="text-gray-400">N/A</span>;
+    }
+    return `${weight.toFixed(2)} kg`;
+  };
+
   return (
     <div className="flex flex-col gap-2 max-h-[600px] h-full w-full overflow-y-auto bg-cardBg rounded-lg py-[30px] px-[20px]">
       {/* Header */}
@@ -64,7 +71,7 @@ const ShowItem = () => {
                 )}
 
                 <p className="text-white text-xs">
-                  Weight: {parseFloat(item.weight.toFixed(2))} kg
+                  Weight: {renderWeight(item.weight)}
                 </p>
               </span>
               <hr className="opacity-25 text-white" />

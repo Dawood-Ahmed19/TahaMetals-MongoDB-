@@ -20,6 +20,16 @@ const BandSizeOptions = [
   '4"',
 ];
 
+const CuttBallSizeOptions = [
+  '1/2"',
+  '5/8"',
+  '3/4"',
+  '1"',
+  '1-1/2"',
+  '2"',
+  '3"',
+];
+
 const SquareItemSizeOptions = [
   '4" x 4"',
   '3" x 3"',
@@ -107,6 +117,8 @@ const BasecupSizeSquareOptions = [
   '4" x 4" x 6"',
 ];
 
+const CuttBallColorOptions = ["Silver", "Golden", "Multi"];
+
 interface ItemCardProps {
   initialData?: {
     id: string;
@@ -123,6 +135,7 @@ interface ItemCardProps {
     height?: number | string;
     date: string;
     index: number;
+    color?: string;
   };
   isEdit?: boolean;
   onSubmit?: (updateData: any) => void;
@@ -144,6 +157,7 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     price: "",
     stock: "",
     height: "",
+    color: "",
   });
 
   useEffect(() => {
@@ -163,6 +177,7 @@ export default function ItemCard({ initialData }: ItemCardProps) {
           : String(initialData.pricePerKg ?? ""),
         stock: String(initialData.quantity ?? ""),
         height: initialData.height != null ? String(initialData.height) : "",
+        color: initialData.color ?? "",
       }));
     }
   }, [initialData]);
@@ -174,6 +189,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     formData.itemType === "Hardware" && formData.itemName === "Basecup";
   const isHardwareBand =
     formData.itemType === "Hardware" && formData.itemName === "Band";
+  const isHardwareCuttBall =
+    formData.itemType === "Hardware" && formData.itemName === "Cutt Ball";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,7 +208,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       !formData.itemSize ||
       !formData.stock ||
       !formData.price ||
-      (isPillars ? !formData.gote : !formData.guage && !isHardware)
+      (isPillars ? !formData.gote : !formData.guage && !isHardware) ||
+      (isHardwareCuttBall && !formData.color)
     ) {
       alert("Please fill all required fields before submitting.");
       return;
@@ -207,12 +225,13 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       quantity: Number(formData.stock),
       height: formData.height,
       date: new Date().toISOString(),
+      color: formData.color,
     };
 
-    if (isHardwareBand) {
-      newItem.pricePerUnit = Number(formData.price); // ✅ save per-unit
+    if (isHardwareBand || isHardwareCuttBall) {
+      newItem.pricePerUnit = Number(formData.price);
     } else {
-      newItem.pricePerKg = Number(formData.price); // ✅ save per-kg
+      newItem.pricePerKg = Number(formData.price);
       newItem.weight = Number(formData.weight);
     }
 
@@ -289,6 +308,7 @@ export default function ItemCard({ initialData }: ItemCardProps) {
           gote: "",
           height: "",
           itemName: "",
+          color: "",
         })),
     },
     ...(formData.itemType === "Pipe" || formData.itemType === "Pillars"
@@ -312,6 +332,7 @@ export default function ItemCard({ initialData }: ItemCardProps) {
                 itemName: value,
                 pipeType: "",
                 itemSize: "",
+                color: "",
               })),
           },
         ]
@@ -338,12 +359,26 @@ export default function ItemCard({ initialData }: ItemCardProps) {
             : BasecupSizeSquareOptions
           : isHardwareBand
           ? BandSizeOptions
+          : isHardwareCuttBall
+          ? CuttBallSizeOptions
           : formData.pipeType === "Round"
           ? RoundItemSizeOptions
           : SquareItemSizeOptions,
       onChange: (value: string) =>
         setFormData((prev) => ({ ...prev, itemSize: value })),
     },
+    ...(isHardwareCuttBall
+      ? [
+          {
+            label: "Color",
+            value: formData.color,
+            type: "select",
+            options: CuttBallColorOptions,
+            onChange: (value: string) =>
+              setFormData((prev) => ({ ...prev, color: value })),
+          },
+        ]
+      : []),
     ...(isPillars
       ? [
           {
@@ -372,10 +407,10 @@ export default function ItemCard({ initialData }: ItemCardProps) {
           },
         ]
       : []),
-    ...(isHardwareBand
+    ...(isHardwareBand || isHardwareCuttBall
       ? [
           {
-            label: "Price Per Unit (PKR)", // ✅ clear per-unit field
+            label: "Price Per Unit (PKR)",
             value: formData.price,
             placeholder: "Enter per-item price",
             onChange: (value: string) =>
