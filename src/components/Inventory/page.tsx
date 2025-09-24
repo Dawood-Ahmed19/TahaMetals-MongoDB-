@@ -98,7 +98,9 @@ export default function InventoryCard() {
           if (
             item.type?.toLowerCase() === "hardware" &&
             (item.name?.toLowerCase() === "band" ||
-              item.name?.toLowerCase() === "cutt ball")
+              item.name?.toLowerCase() === "cutt ball" ||
+              item.name?.toLowerCase() === "draz" ||
+              item.name?.toLowerCase() === "rod")
           ) {
             pricePerKg = "N/A";
             unitPrice = item.pricePerUnit ?? "N/A";

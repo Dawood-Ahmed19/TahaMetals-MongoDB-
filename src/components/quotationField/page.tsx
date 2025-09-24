@@ -67,83 +67,6 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   const balance = grandTotal - received;
 
   // =================== HELPERS ===================
-  // const calculateRow = (selected: InventoryItem, qty: number) => {
-  //   let weight = 0;
-  //   let rate = 0;
-  //   let amount = 0;
-
-  //   if (!selected || !selected.name) {
-  //     console.warn("Invalid selected item:", selected);
-  //     return { weight, rate, amount };
-  //   }
-
-  //   if (
-  //     selected.type === "hardware" &&
-  //     selected.name.toLowerCase() === "band"
-  //   ) {
-  //     weight = 0;
-  //     rate = selected.pricePerUnit ?? 0;
-  //     if (isNaN(rate) || rate < 0 || rate > 1e6) {
-  //       console.warn("Invalid pricePerUnit for band:", selected.name, rate);
-  //       rate = 0;
-  //     }
-  //     amount = qty * rate;
-  //   } else {
-  //     const singlePieceWeight =
-  //       selected.quantity > 0 ? (selected.weight ?? 0) / selected.quantity : 0;
-  //     if (
-  //       isNaN(singlePieceWeight) ||
-  //       singlePieceWeight <= 0 ||
-  //       singlePieceWeight > 1e6
-  //     ) {
-  //       console.warn(
-  //         "Invalid singlePieceWeight:",
-  //         selected.name,
-  //         singlePieceWeight,
-  //         "quantity:",
-  //         selected.quantity,
-  //         "weight:",
-  //         selected.weight
-  //       );
-  //       return { weight: 0, rate: 0, amount: 0 };
-  //     }
-
-  //     const sellingPricePerKg = (selected.pricePerKg ?? 0) + 10; // markup +10
-  //     if (
-  //       isNaN(sellingPricePerKg) ||
-  //       sellingPricePerKg <= 0 ||
-  //       sellingPricePerKg > 1e6
-  //     ) {
-  //       console.warn(
-  //         "Invalid sellingPricePerKg:",
-  //         selected.name,
-  //         sellingPricePerKg
-  //       );
-  //       return { weight: 0, rate: 0, amount: 0 };
-  //     }
-
-  //     const unitPrice = singlePieceWeight * sellingPricePerKg;
-  //     if (isNaN(unitPrice) || unitPrice <= 0 || unitPrice > 1e6) {
-  //       console.warn("Invalid unitPrice:", selected.name, unitPrice);
-  //       return { weight: 0, rate: 0, amount: 0 };
-  //     }
-
-  //     weight = qty * singlePieceWeight;
-  //     rate = unitPrice;
-  //     amount = qty * rate;
-  //   }
-
-  //   console.log("Calculated values:", {
-  //     weight,
-  //     rate,
-  //     amount,
-  //     item: selected.name,
-  //     qty,
-  //   }); // Debug log
-  //   return { weight, rate, amount };
-  // };
-
-  // =================== HELPERS ===================
   const calculateRow = (selected: InventoryItem, qty: number) => {
     let weight = 0;
     let rate = 0;
@@ -157,7 +80,9 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     if (
       selected.type?.toLowerCase() === "hardware" &&
       (selected.name?.toLowerCase() === "band" ||
-        selected.name?.toLowerCase() === "cutt ball")
+        selected.name?.toLowerCase() === "cutt ball" ||
+        selected.name?.toLowerCase() === "draz" ||
+        selected.name?.toLowerCase() === "rod")
     ) {
       weight = 0;
       rate = selected.pricePerUnit ?? 0;
