@@ -49,7 +49,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         const res = await fetch("/api/inventory");
         const data = await res.json();
         if (data.success) {
-          console.log("Fetched Inventory Items:", data.items); // Debug log
+          console.log("Fetched Inventory Items:", data.items);
           setInventoryItems(data.items || []);
         } else {
           console.error("Fetch failed:", data.message);

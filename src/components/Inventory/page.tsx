@@ -23,9 +23,13 @@ export interface Item {
 export default function InventoryCard() {
   const [items, setItems] = useState<Item[]>([]);
   const [searchItem, setSearchitem] = useState("");
+  const [filterType, setFilterType] = useState<string>("All");
 
-  const filteredItems = items.filter((item) =>
-    item.name?.toLowerCase().includes(searchItem.toLowerCase())
+  const filteredItems = items.filter(
+    (item) =>
+      item.name?.toLowerCase().includes(searchItem.toLowerCase()) &&
+      (filterType === "All" ||
+        item.type.toLowerCase() === filterType.toLowerCase())
   );
 
   useEffect(() => {
@@ -71,6 +75,20 @@ export default function InventoryCard() {
           placeholder="Type here"
           fontSize="14px"
         />
+      </span>
+
+      <span className="flex items-center gap-4 mb-4">
+        <label className="text-white text-sm">Filter by Type:</label>
+        <select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+          className="bg-fieldBg text-white p-2 rounded"
+        >
+          <option value="All">All</option>
+          <option value="Hardware">Hardware</option>
+          <option value="Pipe">Pipe</option>
+          <option value="Pillars">Pillars</option>
+        </select>
       </span>
 
       <span className="max-h-[400px] overflow-y-auto">

@@ -97,12 +97,11 @@ const ShowInvoices = () => {
 
     if (filterOption === "Paid") return matchesSearch && balance <= 0;
     if (filterOption === "Unpaid") return matchesSearch && balance > 0;
-    return matchesSearch; // "All" case
+    return matchesSearch;
   });
 
   return (
     <span className="relative max-h-[600px] w-full overflow-y-auto bg-cardBg rounded-lg">
-      {/* Header + Search + Filter */}
       <div className="flex justify-between items-center px-[50px] py-[20px]">
         <p className="text-lg text-white">Recent Invoices</p>
         <div className="flex items-center gap-4">
@@ -111,12 +110,12 @@ const ShowInvoices = () => {
             placeholder="Search by Invoice ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-3 py-1 rounded text-sm border border-gray-600 text-white bg-gray-700 focus:ring-0 focus:outline-none"
+            className="px-3 py-1 rounded text-sm border border-gray-600 text-white bg-fieldBg focus:ring-0 focus:outline-none"
           />
           <select
             value={filterOption}
             onChange={(e) => setFilterOption(e.target.value)}
-            className="px-3 py-1 rounded text-sm border border-gray-600 text-white bg-gray-700 focus:ring-0 focus:outline-none"
+            className="px-3 py-1 rounded text-sm border border-gray-600 text-white bg-fieldBg focus:ring-0 focus:outline-none"
           >
             <option value="All">All</option>
             <option value="Paid">Paid</option>
@@ -126,7 +125,7 @@ const ShowInvoices = () => {
       </div>
 
       {/* Table Header */}
-      <div className="flex items-center justify-between h-[70px] w-full bg-BgColor px-[50px]">
+      <div className="flex items-center justify-between h-[70px] w-full bg-fieldBg px-[50px]">
         <p className="text-white text-xs w-[100px]">Invoice Id</p>
         <p className="text-white text-xs w-[120px]">Date</p>
         <p className="text-white text-xs w-[80px] text-center">Discount</p>
