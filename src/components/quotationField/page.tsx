@@ -43,6 +43,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [quotationId, setQuotationId] = useState<string>("");
   const [loading, setLoading] = useState<number>(0);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchInventory = async () => {
@@ -180,6 +181,8 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     }
 
     try {
+      setIsSaving(true);
+
       const res = await fetch("/api/quotations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -212,6 +215,8 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     } catch (err: any) {
       console.error("Error in saveQuotation:", err.message);
       alert("❌ Error saving quotation: " + err.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -561,23 +566,23 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       </div>
 
       <span className="no-print flex items-center gap-4">
-        <button
-          onClick={saveQuotation}
-          className="mt-4 bg-blue-600 px-4 py-2 rounded text-white hover:cursor-pointer"
-        >
-          Save
-        </button>
-        <button
-          onClick={handleDownloadPDF}
-          disabled={isGeneratingPdf || !quotationId}
-          className="mt-4 bg-green-600 px-4 py-2 rounded text-white hover:cursor-pointer"
-        >
-          {isGeneratingPdf
-            ? "Generating..."
-            : !quotationId
-            ? "Save first"
-            : "Download PDF"}
-        </button>
+        {!quotationId ? (
+          <button
+            onClick={saveQuotation}
+            disabled={isSaving}
+            className="mt-4 bg-blue-600 px-4 py-2 rounded text-white hover:cursor-pointer disabled:opacity-50"
+          >
+            {isSaving ? "Loading..." : "Save"}
+          </button>
+        ) : (
+          <button
+            onClick={handleDownloadPDF}
+            disabled={isGeneratingPdf}
+            className="mt-4 bg-green-600 px-4 py-2 rounded text-white hover:cursor-pointer disabled:opacity-50"
+          >
+            {isGeneratingPdf ? "Generating..." : "Download PDF"}
+          </button>
+        )}
       </span>
     </>
   );
