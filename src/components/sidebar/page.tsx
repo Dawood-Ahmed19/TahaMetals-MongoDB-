@@ -9,7 +9,7 @@ const sideBarItems = [
   { name: "Inventory", path: "/Inventory" },
   { name: "Add Item", path: "/addItem" },
   { name: "Invoice", path: "/Invoice" },
-  { name: "Rate list", path: "/RateList" },
+  { name: "Reports", path: "/Reports" },
 ];
 
 export default function Sidebar() {

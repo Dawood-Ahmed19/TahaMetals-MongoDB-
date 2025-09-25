@@ -42,43 +42,39 @@ export default function InventoryItem({
     router.push(`/Inventory/edit/${_id}`);
   };
 
-  // const renderValue = (value: any, suffix?: string) => {
-  //   if (
-  //     value === "N/A" ||
-  //     value === "" ||
-  //     value === null ||
-  //     value === undefined ||
-  //     value === 0 ||
-  //     value === "0" ||
-  //     Number.isNaN(value)
-  //   ) {
-  //     return <span className="text-gray-600 font-semibold">N/A</span>;
-  //   }
-  //   return suffix ? `${value} ${suffix}` : value;
-  // };
+  const renderValue = (
+    value: any,
+    suffix?: string,
+    isOptional: boolean = false
+  ) => {
+    const isNA =
+      isOptional &&
+      (value === "N/A" ||
+        value === null ||
+        value === undefined ||
+        (typeof value === "string" && value.trim() === "") ||
+        (typeof value === "number" && value === 0) ||
+        (typeof value === "string" && value.trim() === "0"));
 
-  const renderValue = (value: any, suffix?: string) => {
-    // Check if value is non-numeric (string or other non-number type)
-    if (typeof value === "string" && isNaN(Number(value))) {
-      return value || <span className="text-gray-600 font-semibold">N/A</span>;
+    if (isNA) {
+      return (
+        <span className="text-gray-600 font-semibold !important">N/A</span>
+      );
     }
-    // Handle numeric cases
+
     if (
-      value === "N/A" ||
-      value === "" ||
-      value === null ||
-      value === undefined ||
-      value === 0 ||
-      value === "0" ||
-      Number.isNaN(value)
+      typeof value === "string" &&
+      !isNaN(Number(value)) &&
+      value.trim() !== ""
     ) {
-      return <span className="text-gray-600 font-semibold">N/A</span>;
+      const numValue = Number(value);
+      const formattedValue = Number.isInteger(numValue)
+        ? numValue
+        : numValue.toFixed(2);
+      return suffix ? `${formattedValue} ${suffix}` : formattedValue;
     }
-    const numValue = Number(value);
-    const formattedValue = Number.isInteger(numValue)
-      ? numValue
-      : numValue.toFixed(2);
-    return suffix ? `${formattedValue} ${suffix}` : formattedValue;
+
+    return value;
   };
 
   const isBand =
@@ -86,22 +82,22 @@ export default function InventoryItem({
 
   return (
     <div
-      className={`${inventoryGridCols} px-[120px] py-[20px] border-b border-gray-800 text-xs items-center
-  ${quantity === 0 ? "bg-gray-700 text-gray-400" : "bg-fieldBg text-white"}`}
+      className={`${inventoryGridCols} px-[80px] py-[20px] border-b border-gray-800 text-xs items-center
+      ${
+        quantity === 0 ? "bg-gray-700 text-gray-400" : "bg-fieldBg text-white"
+      }`}
     >
-      <p>{renderValue(name)}</p>
-      <p>{renderValue(type)}</p>
-      <p>{renderValue(color)}</p>
-      <p>{renderValue(guage)}</p>
-      <p>{renderValue(gote)}</p>
-      <p>{renderValue(size)}</p>
-
+      <p>{renderValue(name, undefined, false)}</p>
+      <p>{renderValue(type, undefined, false)}</p>
+      <p>{renderValue(color, undefined, true)}</p>
+      <p>{renderValue(guage, undefined, true)}</p>
+      <p>{renderValue(gote, undefined, true)}</p>
+      <p>{renderValue(size, undefined, true)}</p>
       <p>
         {isBand
-          ? renderValue("N/A")
-          : renderValue(weight ? Number(weight) : "N/A", "KG")}
+          ? renderValue("N/A", "KG", true)
+          : renderValue(weight !== undefined ? weight : "N/A", "KG", true)}
       </p>
-
       <p>
         {quantity === 0 ? (
           <span className="text-red-500 font-semibold">Out of Stock</span>
@@ -109,10 +105,12 @@ export default function InventoryItem({
           renderValue(quantity)
         )}
       </p>
-
-      <p>{isBand ? renderValue("N/A") : renderValue(pricePerKg, "PKR")}</p>
-      <p>{renderValue(unitPrice, "PKR")}</p>
-
+      <p>
+        {isBand
+          ? renderValue("N/A", "PKR", true)
+          : renderValue(pricePerKg, "PKR", true)}
+      </p>
+      <p>{renderValue(unitPrice, "PKR", true)}</p>
       <div className="flex gap-2">
         <button
           onClick={handleEditItem}
@@ -132,7 +130,6 @@ export default function InventoryItem({
           <FontAwesomeIcon icon={faTrash} />
         </button>
       </div>
-
       <p>{renderValue(new Date(date).toLocaleDateString())}</p>
     </div>
   );

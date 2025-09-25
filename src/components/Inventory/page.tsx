@@ -93,7 +93,7 @@ export default function InventoryCard() {
 
       <span className="max-h-[400px] overflow-y-auto">
         <span
-          className={`${inventoryGridCols} px-[120px] py-[20px] bg-fieldBg border-b rounded-t-sm border-gray-600 text-white text-xs`}
+          className={`${inventoryGridCols} px-[80px] py-[20px] bg-fieldBg border-b rounded-t-sm border-gray-600 text-white text-xs`}
         >
           <p>Item name</p>
           <p>Item type</p>
