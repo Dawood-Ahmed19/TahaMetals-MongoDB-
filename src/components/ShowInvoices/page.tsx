@@ -26,6 +26,13 @@ const ShowInvoices = () => {
   const [addPaymentFor, setAddPaymentFor] = useState<Quotation | null>(null);
   const [newPayment, setNewPayment] = useState({ amount: 0, date: "" });
   const [filterOption, setFilterOption] = useState("All");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    if (addPaymentFor) {
+      setErrorMessage("");
+    }
+  }, [addPaymentFor]);
 
   useEffect(() => {
     const fetchQuotations = async () => {
@@ -47,6 +54,22 @@ const ShowInvoices = () => {
   const handleAddPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addPaymentFor?._id) return;
+
+    const payments = Array.isArray(addPaymentFor.payments)
+      ? addPaymentFor.payments
+      : addPaymentFor.received
+      ? [{ amount: addPaymentFor.received, date: addPaymentFor.date }]
+      : [];
+    const totalReceived = payments.reduce((s, p) => s + p.amount, 0);
+    const balance =
+      (addPaymentFor.grandTotal || addPaymentFor.amount) - totalReceived;
+
+    if (newPayment.amount > balance) {
+      setErrorMessage("You can't add more amount than Balance remaining");
+      return;
+    }
+
+    setErrorMessage("");
 
     try {
       const res = await fetch(
@@ -268,6 +291,7 @@ const ShowInvoices = () => {
                 onChange={(e) =>
                   setNewPayment({ ...newPayment, amount: +e.target.value })
                 }
+                min="0"
                 className="border p-2 text-sm"
               />
               <input
@@ -278,6 +302,9 @@ const ShowInvoices = () => {
                 }
                 className="border p-2 text-sm"
               />
+              {errorMessage && (
+                <p className="text-red-500 text-sm">{errorMessage}</p>
+              )}
               <button
                 type="submit"
                 className="bg-green-500 text-white px-3 py-1 rounded"
@@ -287,7 +314,10 @@ const ShowInvoices = () => {
             </form>
             <button
               className="mt-2 px-3 py-1 bg-gray-500 text-white rounded"
-              onClick={() => setAddPaymentFor(null)}
+              onClick={() => {
+                setAddPaymentFor(null);
+                setErrorMessage("");
+              }}
             >
               Cancel
             </button>
