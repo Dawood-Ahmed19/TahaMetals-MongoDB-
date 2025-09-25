@@ -7,13 +7,16 @@ interface Payment {
   date: string;
 }
 
-// POST /api/quotations/[id]/addPayments
-export async function POST(req: Request, context: { params: { id: string } }) {
+// ✅ POST /api/quotations/[id]/addPayments
+export async function POST(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = context.params;
+    const { id } = params;
     const { amount, date } = await req.json();
 
-    // Validate ObjectId
+    // 1️⃣ Validate ObjectId
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
         { success: false, error: "Invalid quotation ID" },
@@ -21,51 +24,80 @@ export async function POST(req: Request, context: { params: { id: string } }) {
       );
     }
 
+    // 2️⃣ Validate amount
+    const parsedAmount = parseInt(amount, 10);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return NextResponse.json(
+        { success: false, error: "Invalid payment amount" },
+        { status: 400 }
+      );
+    }
+
     const client = await clientPromise;
     const db = client.db("TahaMetals");
-    const quotations = db.collection("quotations");
+    const quotationsCol = db.collection("quotations");
 
-    const paymentEntry: Payment = {
-      amount,
-      date: date || new Date().toISOString(),
-    };
-
-    // Update quotation (cast to any to silence TS if needed)
-    await quotations.updateOne(
-      { _id: new ObjectId(id) },
-      { $push: { payments: paymentEntry } as any }
-    );
-
-    // Fetch updated quotation
-    const updated = await quotations.findOne({ _id: new ObjectId(id) });
-
-    if (!updated) {
+    // 3️⃣ Fetch existing quotation
+    const quotation = await quotationsCol.findOne({ _id: new ObjectId(id) });
+    if (!quotation) {
       return NextResponse.json(
         { success: false, error: "Quotation not found" },
         { status: 404 }
       );
     }
 
-    const payments: Payment[] = Array.isArray(updated.payments)
-      ? updated.payments
+    const existingPayments: Payment[] = Array.isArray(quotation.payments)
+      ? quotation.payments
       : [];
 
-    const totalReceived = payments.reduce((s, p) => s + p.amount, 0);
-    const balance = updated.grandTotal
-      ? updated.grandTotal - totalReceived
-      : updated.amount - totalReceived;
+    // 4️⃣ Add new payment (always integer)
+    const newPayment: Payment = {
+      amount: parsedAmount,
+      date: date || new Date().toISOString(),
+    };
+    const updatedPayments = [...existingPayments, newPayment];
 
+    // 5️⃣ Recalculate totals (always integers)
+    const totalReceived = parseInt(
+      updatedPayments.reduce((s, p) => s + p.amount, 0).toString(),
+      10
+    );
+    const grandTotal = parseInt(
+      (quotation.grandTotal ?? quotation.amount ?? 0).toString(),
+      10
+    );
+    const balance = Math.max(
+      parseInt((grandTotal - totalReceived).toString(), 10),
+      0
+    );
+
+    // 6️⃣ Save back to DB
+    await quotationsCol.updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          payments: updatedPayments,
+          totalReceived,
+          balance,
+        },
+      }
+    );
+
+    // 7️⃣ Return updated quotation
     return NextResponse.json({
       success: true,
       quotation: {
-        ...updated,
-        payments,
+        ...quotation,
+        payments: updatedPayments,
         totalReceived,
         balance,
       },
     });
   } catch (err) {
-    console.error("Error adding payment:", err);
-    return NextResponse.json({ success: false }, { status: 500 });
+    console.error("❌ Error adding payment:", err);
+    return NextResponse.json(
+      { success: false, error: "Failed to add payment" },
+      { status: 500 }
+    );
   }
 }

@@ -122,10 +122,10 @@ export default function InventoryCard() {
             pricePerKg = item.pricePerKg ?? "N/A";
             unitPrice =
               item.quantity > 0 && item.pricePerKg
-                ? (
+                ? Math.round(
                     ((item.weight ?? 0) / item.quantity) *
-                    (item.pricePerKg ?? 0)
-                  ).toFixed(2)
+                      (item.pricePerKg ?? 0)
+                  )
                 : "N/A";
           }
 

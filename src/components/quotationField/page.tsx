@@ -84,14 +84,14 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         selected.name?.toLowerCase() === "draz")
     ) {
       weight = 0;
-      rate = selected.pricePerUnit ?? 0;
+      rate = Math.round(selected.pricePerUnit ?? 0); // Ensure rate is an integer
       amount = qty * rate;
     } else {
       const singlePieceWeight =
         selected.quantity > 0 ? (selected.weight ?? 0) / selected.quantity : 0;
 
       const sellingPricePerKg = selected.pricePerKg ?? 0;
-      const unitPrice = singlePieceWeight * sellingPricePerKg;
+      const unitPrice = Math.round(singlePieceWeight * sellingPricePerKg); // Ensure rate is an integer
 
       weight = qty * singlePieceWeight;
       rate = unitPrice;
@@ -159,6 +159,12 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         newRows[index].rate = 0;
         newRows[index].amount = 0;
       }
+    } else if (field === "rate") {
+      // Ensure rate is an integer
+      numValue = Math.round(numValue);
+      newRows[index] = { ...newRows[index], rate: numValue };
+      const qty = Number(newRows[index].qty) || 0;
+      newRows[index].amount = qty * numValue;
     } else {
       newRows[index] = { ...newRows[index], [field]: numValue };
       const qty = Number(newRows[index].qty) || 0;
@@ -272,7 +278,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
             ? "0"
             : Number(r.rate).toLocaleString("en-US", {
                 minimumFractionDigits: 0,
-                maximumFractionDigits: 2,
+                maximumFractionDigits: 0, // Ensure rate is displayed as integer
               }),
           Number.isNaN(Number(r.amount))
             ? "0"
@@ -455,25 +461,19 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                   <input
                     min={0}
                     type="number"
-                    value={
-                      row.rate
-                        ? Number.isInteger(row.rate)
-                          ? row.rate.toString()
-                          : row.rate.toFixed(2)
-                        : ""
-                    }
+                    step={1} // Restrict to integers
+                    value={Number.isNaN(row.rate) ? "" : row.rate}
                     onChange={(e) => {
                       const value = e.target.value;
-                      const parsedValue = value === "" ? 0 : parseFloat(value);
-                      const limitedValue = Math.round(parsedValue * 100) / 100;
+                      const parsedValue =
+                        value === "" ? 0 : parseInt(value, 10);
                       handleChange(
                         i,
                         "rate",
-                        Number.isNaN(limitedValue) ? 0 : limitedValue
+                        Number.isNaN(parsedValue) ? 0 : parsedValue
                       );
                     }}
                     className="bg-transparent text-center w-full outline-none"
-                    step="0.01"
                   />
                 </td>
 

@@ -14,8 +14,8 @@ interface Quotation {
   discount: number;
   amount: number;
   grandTotal: number;
-  received?: number;
-  balance?: number;
+  received: number;
+  balance: number;
   payments?: Payment[];
 }
 
@@ -28,14 +28,12 @@ const ShowInvoices = () => {
   const [filterOption, setFilterOption] = useState("All");
   const [errorMessage, setErrorMessage] = useState("");
 
-  // clear error when switching invoice
   useEffect(() => {
     if (addPaymentFor) {
       setErrorMessage("");
     }
   }, [addPaymentFor]);
 
-  // fetch quotations from API with filters
   useEffect(() => {
     const fetchQuotations = async () => {
       try {
@@ -62,16 +60,7 @@ const ShowInvoices = () => {
     e.preventDefault();
     if (!addPaymentFor?._id) return;
 
-    const payments = Array.isArray(addPaymentFor.payments)
-      ? addPaymentFor.payments
-      : addPaymentFor.received
-      ? [{ amount: addPaymentFor.received, date: addPaymentFor.date }]
-      : [];
-    const totalReceived = payments.reduce((s, p) => s + p.amount, 0);
-    const balance =
-      (addPaymentFor.grandTotal || addPaymentFor.amount) - totalReceived;
-
-    if (newPayment.amount > balance) {
+    if (newPayment.amount > addPaymentFor.balance) {
       setErrorMessage("You can't add more amount than Balance remaining");
       return;
     }
@@ -151,82 +140,75 @@ const ShowInvoices = () => {
         {quotations.length === 0 ? (
           <p className="text-gray-400 text-sm">No matching invoices.</p>
         ) : (
-          quotations.map((q) => {
-            const payments = Array.isArray(q.payments)
-              ? q.payments
-              : q.received
-              ? [{ amount: q.received, date: q.date }]
-              : [];
-            const totalReceived = payments.reduce((s, p) => s + p.amount, 0);
-            const balance = q.grandTotal
-              ? q.grandTotal - totalReceived
-              : q.amount - totalReceived;
-
-            return (
-              <div
-                key={q._id}
-                className="flex items-center justify-between text-white text-xs"
-              >
-                <p className="w-[100px]">{q.quotationId}</p>
-                <p className="w-[120px]">
-                  {new Date(q.date).toLocaleDateString()}
-                </p>
-                <p className="w-[80px] text-center">
-                  {q.discount.toLocaleString("en-US", {
+          quotations.map((q) => (
+            <div
+              key={q._id}
+              className="flex items-center justify-between text-white text-xs"
+            >
+              <p className="w-[100px]">{q.quotationId}</p>
+              <p className="w-[120px]">
+                {new Date(q.date).toLocaleDateString()}
+              </p>
+              <p className="w-[80px] text-center">
+                {q.discount.toLocaleString("en-US", {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                Rs
+              </p>
+              <p className="w-[100px] text-center">
+                {q.amount.toLocaleString("en-US", {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                Rs
+              </p>
+              <p className="w-[100px] text-center">
+                {q.received > 0 ? (
+                  `${q.received.toLocaleString("en-US", {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 2,
-                  })}{" "}
-                  Rs
-                </p>
-                <p className="w-[100px] text-center">
-                  {q.amount.toLocaleString("en-US", {
+                  })} Rs`
+                ) : (
+                  <span className="text-red-400 font-semibold">Unpaid</span>
+                )}
+              </p>
+              <p className="w-[100px] text-center">
+                {q.balance > 0 ? (
+                  `${q.balance.toLocaleString("en-US", {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 2,
-                  })}{" "}
-                  Rs
-                </p>
-                <p className="w-[100px] text-center">
-                  {totalReceived > 0 ? (
-                    `${totalReceived.toLocaleString("en-US", {
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 2,
-                    })} Rs`
-                  ) : (
-                    <span className="text-red-400 font-semibold">Unpaid</span>
-                  )}
-                </p>
-                <p className="w-[100px] text-center">
-                  {balance > 0 ? (
-                    `${balance.toLocaleString("en-US", {
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 2,
-                    })} Rs`
-                  ) : (
-                    <span className="text-green-400 font-semibold">Paid</span>
-                  )}
-                </p>
-                <p className="w-[120px] text-center flex gap-2">
-                  <button
-                    onClick={() => setShowPayments({ ...q, payments })}
-                    className="text-blue-400 hover:cursor-pointer"
-                  >
-                    View Payments
-                  </button>
-                  <button
-                    disabled={balance <= 0}
-                    onClick={() => balance > 0 && setAddPaymentFor(q)}
-                    className={`${
-                      balance <= 0
-                        ? "text-gray-500 cursor-not-allowed"
-                        : "text-green-400 hover:cursor-pointer"
-                    }`}
-                  >
-                    Add Payment
-                  </button>
-                </p>
-              </div>
-            );
-          })
+                  })} Rs`
+                ) : (
+                  <span className="text-green-400 font-semibold">Paid</span>
+                )}
+              </p>
+              <p className="w-[120px] text-center flex gap-2">
+                <button
+                  onClick={() =>
+                    setShowPayments({
+                      ...q,
+                      payments: q.payments || [],
+                    })
+                  }
+                  className="text-blue-400 hover:cursor-pointer"
+                >
+                  View Payments
+                </button>
+                <button
+                  disabled={q.balance <= 0}
+                  onClick={() => q.balance > 0 && setAddPaymentFor(q)}
+                  className={`${
+                    q.balance <= 0
+                      ? "text-gray-500 cursor-not-allowed"
+                      : "text-green-400 hover:cursor-pointer"
+                  }`}
+                >
+                  Add Payment
+                </button>
+              </p>
+            </div>
+          ))
         )}
       </div>
 

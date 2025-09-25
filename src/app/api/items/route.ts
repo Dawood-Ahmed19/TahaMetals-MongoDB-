@@ -13,6 +13,8 @@ interface InventoryItem {
   weight: number;
   quantity: number;
   price?: number;
+  pricePerKg?: number;
+  pricePerUnit?: number;
   date: string;
   index?: number;
   height?: string | null;
@@ -36,6 +38,15 @@ function normalizeItem(item: any) {
 
   const uniqueKey = `${name}_${size}_${guage}_${pipeType}`;
 
+  // ✅ Ensure prices are integers (no decimals)
+  const price = item.price != null ? Math.round(Number(item.price)) : undefined;
+  const pricePerKg =
+    item.pricePerKg != null ? Math.round(Number(item.pricePerKg)) : undefined;
+  const pricePerUnit =
+    item.pricePerUnit != null
+      ? Math.round(Number(item.pricePerUnit))
+      : undefined;
+
   return {
     ...item,
     name,
@@ -44,6 +55,9 @@ function normalizeItem(item: any) {
     pipeType,
     type,
     uniqueKey,
+    price,
+    pricePerKg,
+    pricePerUnit,
   };
 }
 
@@ -61,15 +75,26 @@ export async function GET(req: Request) {
     const query: any = {};
 
     if (type && type.toLowerCase() !== "all") {
-      query.type = { $regex: new RegExp(`^${type}$`, "i") }; // case-insensitive match
+      query.type = { $regex: new RegExp(`^${type}$`, "i") };
     }
 
     if (search) {
-      query.name = { $regex: search, $options: "i" }; // case-insensitive search
+      query.name = { $regex: search, $options: "i" };
     }
 
     const items = await collection.find(query).toArray();
-    return NextResponse.json({ success: true, items });
+
+    // ✅ Ensure integers when returning
+    const sanitized = items.map((i) => ({
+      ...i,
+      price: i.price != null ? Math.round(Number(i.price)) : undefined,
+      pricePerKg:
+        i.pricePerKg != null ? Math.round(Number(i.pricePerKg)) : undefined,
+      pricePerUnit:
+        i.pricePerUnit != null ? Math.round(Number(i.pricePerUnit)) : undefined,
+    }));
+
+    return NextResponse.json({ success: true, items: sanitized });
   } catch (error) {
     console.error("Error fetching items:", error);
     return NextResponse.json(
@@ -95,7 +120,6 @@ export async function POST(req: Request) {
     if (existingItem) {
       const addedQty = Number(normalized.quantity ?? 0);
 
-      // calculate unit weight
       const unitWeight =
         existingItem.quantity > 0
           ? existingItem.weight / existingItem.quantity
@@ -145,7 +169,7 @@ export async function POST(req: Request) {
       itemIndex = nextNumber;
     }
 
-    // ✅ Insert new item
+    // ✅ Insert new item with integer prices
     const newItem = await collection.insertOne({
       ...normalized,
       name: normalized.name,
@@ -183,7 +207,6 @@ export async function PATCH(req: Request) {
     const db = client.db("TahaMetals");
     const collection = db.collection<InventoryItem>("inventory");
 
-    // Find item by name
     const item = await collection.findOne({ name });
     if (!item) {
       return NextResponse.json(
