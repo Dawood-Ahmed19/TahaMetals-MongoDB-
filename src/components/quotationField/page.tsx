@@ -42,6 +42,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   const [received, setReceived] = useState<number>(0);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [quotationId, setQuotationId] = useState<string>("");
+  const [loading, setLoading] = useState<number>(0);
 
   useEffect(() => {
     const fetchInventory = async () => {
@@ -81,8 +82,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       selected.type?.toLowerCase() === "hardware" &&
       (selected.name?.toLowerCase() === "band" ||
         selected.name?.toLowerCase() === "cutt ball" ||
-        selected.name?.toLowerCase() === "draz" ||
-        selected.name?.toLowerCase() === "rod")
+        selected.name?.toLowerCase() === "draz")
     ) {
       weight = 0;
       rate = selected.pricePerUnit ?? 0;
@@ -317,6 +317,15 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         finalY + 32
       );
       doc.text(
+        `LOADING: ${loading.toLocaleString("en-US", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        })}`,
+        rightXTotal,
+        finalY + 64
+      );
+
+      doc.text(
         `GRAND TOTAL: ${grandTotal.toLocaleString("en-US", {
           minimumFractionDigits: 0,
           maximumFractionDigits: 2,
@@ -444,14 +453,16 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                     min={0}
                     type="number"
                     value={
-                      Number.isNaN(row.rate) || row.rate === 0
-                        ? ""
-                        : Number(row.rate).toFixed(2) // Enforce 2 decimal places
+                      row.rate
+                        ? Number.isInteger(row.rate)
+                          ? row.rate.toString()
+                          : row.rate.toFixed(2)
+                        : ""
                     }
                     onChange={(e) => {
                       const value = e.target.value;
                       const parsedValue = value === "" ? 0 : parseFloat(value);
-                      const limitedValue = Math.round(parsedValue * 100) / 100; // Round to 2 decimals
+                      const limitedValue = Math.round(parsedValue * 100) / 100;
                       handleChange(
                         i,
                         "rate",
@@ -459,7 +470,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                       );
                     }}
                     className="bg-transparent text-center w-full outline-none"
-                    step="0.01" // Enforce 2 decimal increments
+                    step="0.01"
                   />
                 </td>
 
@@ -521,6 +532,20 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                 })}
               </td>
             </tr>
+            <tr className="bg-gray-800 font-bold">
+              <td colSpan={3} />
+              <td className="border border-white text-center">LOADING</td>
+              <td className="border border-white text-center">
+                <input
+                  type="number"
+                  min={0}
+                  value={loading || ""}
+                  onChange={(e) => setLoading(Number(e.target.value) || 0)}
+                  className="bg-transparent text-center w-full outline-none"
+                />
+              </td>
+            </tr>
+
             <tr className="bg-gray-800 font-bold">
               <td colSpan={3} />
               <td className="border border-white text-center">GRAND TOTAL</td>

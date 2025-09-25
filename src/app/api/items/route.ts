@@ -48,7 +48,6 @@ function normalizeItem(item: any) {
   };
 }
 
-// ✅ GET all items
 export async function GET() {
   try {
     const client = await clientPromise;
@@ -66,7 +65,6 @@ export async function GET() {
   }
 }
 
-// ✅ POST new item (or increment qty if exists)
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -76,7 +74,6 @@ export async function POST(req: Request) {
     const db = client.db("TahaMetals");
     const collection = db.collection<InventoryItem>("inventory");
 
-    // 1️⃣ Check if item already exists
     const existingItem = await collection.findOne({
       uniqueKey: normalized.uniqueKey,
     });
@@ -113,7 +110,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2️⃣ New item → auto-generate pipe code if type = pipe
     let itemName = normalized.name;
     let itemIndex: number | undefined;
 
@@ -182,7 +178,6 @@ export async function PATCH(req: Request) {
       );
     }
 
-    // ✅ Deduct quantities safely
     const currentQuantity = Number(item.quantity) || 0;
     const currentWeight = Number(item.weight) || 0;
     const soldQty = Number(qty) || 0;

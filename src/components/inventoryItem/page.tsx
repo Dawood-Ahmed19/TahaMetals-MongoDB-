@@ -42,8 +42,27 @@ export default function InventoryItem({
     router.push(`/Inventory/edit/${_id}`);
   };
 
-  // ✅ Universal formatter for missing/invalid values
+  // const renderValue = (value: any, suffix?: string) => {
+  //   if (
+  //     value === "N/A" ||
+  //     value === "" ||
+  //     value === null ||
+  //     value === undefined ||
+  //     value === 0 ||
+  //     value === "0" ||
+  //     Number.isNaN(value)
+  //   ) {
+  //     return <span className="text-gray-600 font-semibold">N/A</span>;
+  //   }
+  //   return suffix ? `${value} ${suffix}` : value;
+  // };
+
   const renderValue = (value: any, suffix?: string) => {
+    // Check if value is non-numeric (string or other non-number type)
+    if (typeof value === "string" && isNaN(Number(value))) {
+      return value || <span className="text-gray-600 font-semibold">N/A</span>;
+    }
+    // Handle numeric cases
     if (
       value === "N/A" ||
       value === "" ||
@@ -55,10 +74,13 @@ export default function InventoryItem({
     ) {
       return <span className="text-gray-600 font-semibold">N/A</span>;
     }
-    return suffix ? `${value} ${suffix}` : value;
+    const numValue = Number(value);
+    const formattedValue = Number.isInteger(numValue)
+      ? numValue
+      : numValue.toFixed(2);
+    return suffix ? `${formattedValue} ${suffix}` : formattedValue;
   };
 
-  // Special handling for "band" in hardware
   const isBand =
     type?.toLowerCase() === "hardware" && name?.toLowerCase() === "band";
 
@@ -77,7 +99,7 @@ export default function InventoryItem({
       <p>
         {isBand
           ? renderValue("N/A")
-          : renderValue(weight ? Number(weight).toFixed(2) : "N/A", "KG")}
+          : renderValue(weight ? Number(weight) : "N/A", "KG")}
       </p>
 
       <p>

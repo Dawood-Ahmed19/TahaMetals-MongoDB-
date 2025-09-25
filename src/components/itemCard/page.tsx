@@ -61,7 +61,7 @@
 //   '1"',
 // ];
 
-// const AdditionalRoundItemSizeOptions = ['3/4"', '5/8"', '1/2"', '3/8"'];
+// const AdditionalRoundItemSizeOptions = ["3/4", '5/8"', '1/2"', '3/8"'];
 
 // const HardwareItemNameOptions = [
 //   "Plate",
@@ -236,7 +236,12 @@
 //       color: formData.color,
 //     };
 
-//     if (isHardwareBand || isHardwareCuttBall || isHardwareDraz) {
+//     if (
+//       isHardwareBand ||
+//       isHardwareCuttBall ||
+//       isHardwareDraz ||
+//       isHardwareRod
+//     ) {
 //       newItem.pricePerUnit = Number(formData.price);
 //     } else {
 //       newItem.pricePerKg = Number(formData.price);
@@ -723,12 +728,7 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       color: formData.color,
     };
 
-    if (
-      isHardwareBand ||
-      isHardwareCuttBall ||
-      isHardwareDraz ||
-      isHardwareRod
-    ) {
+    if (isHardwareBand || isHardwareCuttBall || isHardwareDraz) {
       newItem.pricePerUnit = Number(formData.price);
     } else {
       newItem.pricePerKg = Number(formData.price);
@@ -911,7 +911,7 @@ export default function ItemCard({ initialData }: ItemCardProps) {
           },
         ]
       : []),
-    ...(isHardwareBand || isHardwareCuttBall || isHardwareDraz || isHardwareRod
+    ...(isHardwareBand || isHardwareCuttBall || isHardwareDraz
       ? [
           {
             label: "Price Per Unit (PKR)",

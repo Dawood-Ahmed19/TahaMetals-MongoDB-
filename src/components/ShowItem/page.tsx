@@ -40,7 +40,12 @@ const ShowItem = () => {
   }
 
   const renderWeight = (weight?: number | null) => {
-    if (weight === null || weight === undefined || isNaN(weight)) {
+    if (
+      weight === null ||
+      weight === undefined ||
+      isNaN(weight) ||
+      weight === 0
+    ) {
       return <span className="text-gray-400">N/A</span>;
     }
     return `${weight.toFixed(2)} kg`;
