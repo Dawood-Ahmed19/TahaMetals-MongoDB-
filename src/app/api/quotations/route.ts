@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     const quotationsCol = db.collection<Quotation>("quotations");
     const inventoryCol = db.collection("inventory");
 
-    // 1️⃣ Validate stock before creating quotation
+    // 1️⃣ Stock validation
     for (const soldItem of items) {
       const { item, qty } = soldItem;
 
@@ -126,23 +126,35 @@ export async function POST(req: Request) {
   }
 }
 
-// ✅ Get all quotations
-export async function GET() {
+// ✅ Get quotations with filtering (search + Paid/Unpaid/All)
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get("status"); // "Paid" | "Unpaid" | "All"
+    const search = searchParams.get("search");
+
     const client = await clientPromise;
     const db = client.db("TahaMetals");
     const quotationsCol = db.collection<Quotation>("quotations");
 
-    const rawDocs = await quotationsCol.find({}).sort({ date: -1 }).toArray();
-    const count = await quotationsCol.countDocuments({});
+    // 1️⃣ Base query
+    const query: any = {};
 
-    const quotations: Quotation[] = rawDocs.map((q) => {
+    if (search) {
+      query.quotationId = { $regex: search, $options: "i" };
+    }
+
+    // 2️⃣ Fetch docs
+    const rawDocs = await quotationsCol
+      .find(query)
+      .sort({ date: -1 })
+      .toArray();
+    const count = await quotationsCol.countDocuments(query);
+
+    // 3️⃣ Compute payments + balance
+    let quotations: Quotation[] = rawDocs.map((q) => {
       const payments: Payment[] = Array.isArray(q.payments) ? q.payments : [];
-
-      const totalReceived = payments.reduce(
-        (s: number, p: Payment) => s + p.amount,
-        0
-      );
+      const totalReceived = payments.reduce((s, p) => s + p.amount, 0);
       const balance = q.grandTotal
         ? q.grandTotal - totalReceived
         : q.amount - totalReceived;
@@ -154,6 +166,17 @@ export async function GET() {
         balance,
       };
     });
+
+    // 4️⃣ Apply Paid / Unpaid filter AFTER balance calculation
+    if (status === "Paid") {
+      quotations = quotations.filter(
+        (q) => q.balance !== undefined && q.balance <= 0
+      );
+    } else if (status === "Unpaid") {
+      quotations = quotations.filter(
+        (q) => q.balance !== undefined && q.balance > 0
+      );
+    }
 
     return NextResponse.json({ success: true, quotations, count });
   } catch (err) {

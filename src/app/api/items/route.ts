@@ -19,7 +19,6 @@ interface InventoryItem {
   uniqueKey?: string;
 }
 
-// 🔹 Normalize item (for duplicate check)
 function normalizeItem(item: any) {
   const name = (item.name || "").trim().toLowerCase();
   const size = String(item.size ?? "")
@@ -48,13 +47,28 @@ function normalizeItem(item: any) {
   };
 }
 
-export async function GET() {
+// ✅ GET (with filtering support)
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const type = searchParams.get("type");
+    const search = searchParams.get("search");
+
     const client = await clientPromise;
     const db = client.db("TahaMetals");
     const collection = db.collection<InventoryItem>("inventory");
 
-    const items = await collection.find({}).toArray();
+    const query: any = {};
+
+    if (type && type.toLowerCase() !== "all") {
+      query.type = { $regex: new RegExp(`^${type}$`, "i") }; // case-insensitive match
+    }
+
+    if (search) {
+      query.name = { $regex: search, $options: "i" }; // case-insensitive search
+    }
+
+    const items = await collection.find(query).toArray();
     return NextResponse.json({ success: true, items });
   } catch (error) {
     console.error("Error fetching items:", error);

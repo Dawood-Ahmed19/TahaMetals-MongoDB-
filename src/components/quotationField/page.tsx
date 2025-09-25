@@ -63,12 +63,10 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     fetchInventory();
   }, []);
 
-  // Totals
   const total = rows.reduce((acc, row) => acc + (row.amount || 0), 0);
   const grandTotal = total - discount;
   const balance = grandTotal - received;
 
-  // =================== HELPERS ===================
   const calculateRow = (selected: InventoryItem, qty: number) => {
     let weight = 0;
     let rate = 0;
@@ -92,7 +90,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       const singlePieceWeight =
         selected.quantity > 0 ? (selected.weight ?? 0) / selected.quantity : 0;
 
-      const sellingPricePerKg = (selected.pricePerKg ?? 0) + 10;
+      const sellingPricePerKg = selected.pricePerKg ?? 0;
       const unitPrice = singlePieceWeight * sellingPricePerKg;
 
       weight = qty * singlePieceWeight;

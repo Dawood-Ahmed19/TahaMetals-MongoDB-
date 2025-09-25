@@ -25,17 +25,14 @@ export default function InventoryCard() {
   const [searchItem, setSearchitem] = useState("");
   const [filterType, setFilterType] = useState<string>("All");
 
-  const filteredItems = items.filter(
-    (item) =>
-      item.name?.toLowerCase().includes(searchItem.toLowerCase()) &&
-      (filterType === "All" ||
-        item.type.toLowerCase() === filterType.toLowerCase())
-  );
-
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        const res = await fetch("/api/items");
+        const query = new URLSearchParams();
+        if (filterType !== "All") query.append("type", filterType);
+        if (searchItem.trim()) query.append("search", searchItem.trim());
+
+        const res = await fetch(`/api/items?${query.toString()}`);
         if (!res.ok) throw new Error("Failed to fetch items");
 
         const data = await res.json();
@@ -46,7 +43,7 @@ export default function InventoryCard() {
     };
 
     fetchItems();
-  }, []);
+  }, [filterType, searchItem]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this item?")) return;
@@ -109,7 +106,7 @@ export default function InventoryCard() {
           <p>Date</p>
         </span>
 
-        {filteredItems.map((item) => {
+        {items.map((item) => {
           let pricePerKg: string | number | undefined;
           let unitPrice: string | number | undefined;
 

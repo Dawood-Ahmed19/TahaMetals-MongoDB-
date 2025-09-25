@@ -28,16 +28,22 @@ const ShowInvoices = () => {
   const [filterOption, setFilterOption] = useState("All");
   const [errorMessage, setErrorMessage] = useState("");
 
+  // clear error when switching invoice
   useEffect(() => {
     if (addPaymentFor) {
       setErrorMessage("");
     }
   }, [addPaymentFor]);
 
+  // fetch quotations from API with filters
   useEffect(() => {
     const fetchQuotations = async () => {
       try {
-        const res = await fetch("/api/quotations");
+        const query = new URLSearchParams();
+        if (filterOption !== "All") query.append("status", filterOption);
+        if (searchTerm.trim()) query.append("search", searchTerm.trim());
+
+        const res = await fetch(`/api/quotations?${query.toString()}`);
         const data = await res.json();
         if (data.success) {
           setQuotations(data.quotations);
@@ -48,8 +54,9 @@ const ShowInvoices = () => {
         console.error("Error fetching quotations:", err);
       }
     };
+
     fetchQuotations();
-  }, []);
+  }, [filterOption, searchTerm]);
 
   const handleAddPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,28 +110,9 @@ const ShowInvoices = () => {
     }
   };
 
-  const filteredQuotations = quotations.filter((q) => {
-    const payments = Array.isArray(q.payments)
-      ? q.payments
-      : q.received
-      ? [{ amount: q.received, date: q.date }]
-      : [];
-    const totalReceived = payments.reduce((s, p) => s + p.amount, 0);
-    const balance = q.grandTotal
-      ? q.grandTotal - totalReceived
-      : q.amount - totalReceived;
-
-    const matchesSearch = q.quotationId
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-
-    if (filterOption === "Paid") return matchesSearch && balance <= 0;
-    if (filterOption === "Unpaid") return matchesSearch && balance > 0;
-    return matchesSearch;
-  });
-
   return (
     <span className="relative max-h-[600px] w-full overflow-y-auto bg-cardBg rounded-lg">
+      {/* Header */}
       <div className="flex justify-between items-center px-[50px] py-[20px]">
         <p className="text-lg text-white">Recent Invoices</p>
         <div className="flex items-center gap-4">
@@ -160,10 +148,10 @@ const ShowInvoices = () => {
 
       {/* Table Body */}
       <div className="relative flex flex-col gap-4 px-[50px] py-[20px]">
-        {filteredQuotations.length === 0 ? (
+        {quotations.length === 0 ? (
           <p className="text-gray-400 text-sm">No matching invoices.</p>
         ) : (
-          filteredQuotations.map((q) => {
+          quotations.map((q) => {
             const payments = Array.isArray(q.payments)
               ? q.payments
               : q.received
