@@ -70,10 +70,10 @@ const ShowInvoices = () => {
     if (!addPaymentFor?._id) return;
 
     const currentReceived = getReceived(addPaymentFor);
-    const newBalance =
-      addPaymentFor.grandTotal - (currentReceived + (newPayment.amount || 0));
+    const balance = getBalance(addPaymentFor); // ✅ simpler & correct
 
-    if (newPayment.amount > newBalance + currentReceived) {
+    // ✅ Validate against remaining balance only
+    if (newPayment.amount > balance) {
       setErrorMessage("You can't add more amount than Balance remaining");
       return;
     }
@@ -112,7 +112,7 @@ const ShowInvoices = () => {
 
       if (data.success && data.quotation) {
         console.log("Updated Quotation:", data.quotation);
-        // Force re-fetch to sync with server
+        // ✅ Refresh the quotations list for live update
         await fetchQuotations();
       } else {
         console.error("Invalid response format:", data);

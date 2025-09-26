@@ -12,16 +12,16 @@ interface InventoryItem {
   size: string;
   weight: number;
   quantity: number;
-  price?: number;
-  pricePerKg?: number;
-  pricePerUnit?: number;
+  pricePerKg?: number | null;
+  pricePerUnit?: number | null;
   date: string;
   index?: number;
   height?: string | null;
   uniqueKey?: string;
+  color?: string;
 }
 
-function normalizeItem(item: any) {
+function normalizeItem(item: any): InventoryItem {
   const name = (item.name || "").trim().toLowerCase();
   const size = String(item.size ?? "")
     .trim()
@@ -38,14 +38,24 @@ function normalizeItem(item: any) {
 
   const uniqueKey = `${name}_${size}_${guage}_${pipeType}`;
 
-  // ✅ Ensure prices are integers (no decimals)
-  const price = item.price != null ? Math.round(Number(item.price)) : undefined;
-  const pricePerKg =
-    item.pricePerKg != null ? Math.round(Number(item.pricePerKg)) : undefined;
-  const pricePerUnit =
-    item.pricePerUnit != null
-      ? Math.round(Number(item.pricePerUnit))
-      : undefined;
+  let pricePerKg =
+    item.pricePerKg != null ? Math.round(Number(item.pricePerKg)) : null;
+  let pricePerUnit =
+    item.pricePerUnit != null ? Math.round(Number(item.pricePerUnit)) : null;
+
+  const weight = Number(item.weight ?? 0);
+  const quantity = Number(item.quantity ?? 0);
+
+  // ✅ Auto calculate pricePerUnit for pipes/pillars
+  if (
+    (!pricePerUnit || pricePerUnit === 0) &&
+    pricePerKg &&
+    weight > 0 &&
+    quantity > 0
+  ) {
+    const unitWeight = weight / quantity;
+    pricePerUnit = Number((unitWeight * pricePerKg).toFixed(2));
+  }
 
   return {
     ...item,
@@ -55,9 +65,10 @@ function normalizeItem(item: any) {
     pipeType,
     type,
     uniqueKey,
-    price,
     pricePerKg,
     pricePerUnit,
+    weight,
+    quantity,
   };
 }
 
@@ -84,17 +95,7 @@ export async function GET(req: Request) {
 
     const items = await collection.find(query).toArray();
 
-    // ✅ Ensure integers when returning
-    const sanitized = items.map((i) => ({
-      ...i,
-      price: i.price != null ? Math.round(Number(i.price)) : undefined,
-      pricePerKg:
-        i.pricePerKg != null ? Math.round(Number(i.pricePerKg)) : undefined,
-      pricePerUnit:
-        i.pricePerUnit != null ? Math.round(Number(i.pricePerUnit)) : undefined,
-    }));
-
-    return NextResponse.json({ success: true, items: sanitized });
+    return NextResponse.json({ success: true, items });
   } catch (error) {
     console.error("Error fetching items:", error);
     return NextResponse.json(
@@ -128,12 +129,21 @@ export async function POST(req: Request) {
       const newQuantity = existingItem.quantity + addedQty;
       const newWeight = unitWeight * newQuantity;
 
+      // ✅ Recalculate pricePerUnit if pricePerKg exists
+      let pricePerUnit = existingItem.pricePerUnit ?? null;
+      if (existingItem.pricePerKg && unitWeight > 0) {
+        pricePerUnit = Number(
+          (unitWeight * existingItem.pricePerKg).toFixed(2)
+        );
+      }
+
       const result = await collection.updateOne(
         { _id: existingItem._id },
         {
           $set: {
             quantity: newQuantity,
             weight: newWeight,
+            pricePerUnit,
             date: new Date().toISOString(),
           },
         }
@@ -142,15 +152,20 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           success: result.modifiedCount > 0,
-          item: { ...existingItem, quantity: newQuantity, weight: newWeight },
+          item: {
+            ...existingItem,
+            quantity: newQuantity,
+            weight: newWeight,
+            pricePerUnit,
+          },
         },
         { status: 200 }
       );
     }
 
+    // Auto-generate Pipe Code
     let itemName = normalized.name;
     let itemIndex: number | undefined;
-
     if (!itemName && normalized.type?.toLowerCase() === "pipe") {
       const lastPipe = await collection
         .find({ type: "pipe" })
@@ -169,12 +184,10 @@ export async function POST(req: Request) {
       itemIndex = nextNumber;
     }
 
-    // ✅ Insert new item with integer prices
     const newItem = await collection.insertOne({
       ...normalized,
       name: normalized.name,
       index: itemIndex ?? 1,
-      quantity: Number(normalized.quantity ?? 0),
       date: new Date().toISOString(),
     });
 
@@ -223,12 +236,20 @@ export async function PATCH(req: Request) {
     const newQuantity = Math.max(currentQuantity - soldQty, 0);
     const newWeight = Math.max(currentWeight - soldWeight, 0);
 
+    // ✅ Recalc unit price if needed
+    let pricePerUnit = item.pricePerUnit ?? null;
+    if (item.pricePerKg && newQuantity > 0 && newWeight > 0) {
+      const unitWeight = newWeight / newQuantity;
+      pricePerUnit = Number((unitWeight * item.pricePerKg).toFixed(2));
+    }
+
     await collection.updateOne(
       { _id: item._id },
       {
         $set: {
           quantity: newQuantity,
           weight: newWeight,
+          pricePerUnit,
           date: new Date().toISOString(),
         },
       }
@@ -236,7 +257,7 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({
       success: true,
-      updated: { name, newQuantity, newWeight },
+      updated: { name, newQuantity, newWeight, pricePerUnit },
     });
   } catch (err) {
     console.error("Error deducting inventory:", err);

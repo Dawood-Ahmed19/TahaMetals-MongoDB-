@@ -84,14 +84,14 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         selected.name?.toLowerCase() === "draz")
     ) {
       weight = 0;
-      rate = Math.round(selected.pricePerUnit ?? 0); // Ensure rate is an integer
+      rate = Math.round(selected.pricePerUnit ?? 0);
       amount = qty * rate;
     } else {
       const singlePieceWeight =
         selected.quantity > 0 ? (selected.weight ?? 0) / selected.quantity : 0;
 
       const sellingPricePerKg = selected.pricePerKg ?? 0;
-      const unitPrice = Math.round(singlePieceWeight * sellingPricePerKg); // Ensure rate is an integer
+      const unitPrice = Math.round(singlePieceWeight * sellingPricePerKg);
 
       weight = qty * singlePieceWeight;
       rate = unitPrice;
@@ -176,6 +176,55 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   };
 
   // =================== Save Quotation ===================
+  // const saveQuotation = async () => {
+  //   const validRows = rows.filter((r) => r.item && r.qty && r.rate);
+
+  //   if (validRows.length === 0) {
+  //     alert("Please add at least one item before saving.");
+  //     return;
+  //   }
+
+  //   try {
+  //     setIsSaving(true);
+
+  //     const res = await fetch("/api/quotations", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({
+  //         items: validRows.map((r) => ({
+  //           item: r.item,
+  //           qty: Number(r.qty),
+  //           weight: Number(r.weight),
+  //           rate: Number(r.rate),
+  //         })),
+  //         discount,
+  //         total,
+  //         grandTotal,
+  //         payments:
+  //           received > 0
+  //             ? [{ amount: received, date: new Date().toISOString() }]
+  //             : [],
+  //       }),
+  //     });
+
+  //     const data = await res.json();
+  //     if (!res.ok || !data.success) {
+  //       throw new Error(data?.error || "Failed to save quotation");
+  //     }
+
+  //     setQuotationId(data.quotation?.quotationId || "");
+  //     alert("✅ Quotation saved & inventory updated!");
+
+  //     if (onSaveSuccess) onSaveSuccess();
+  //   } catch (err: any) {
+  //     console.error("Error in saveQuotation:", err.message);
+  //     alert("❌ Error saving quotation: " + err.message);
+  //   } finally {
+  //     setIsSaving(false);
+  //   }
+  // };
+
+  // =================== Save Quotation ===================
   const saveQuotation = async () => {
     const validRows = rows.filter((r) => r.item && r.qty && r.rate);
 
@@ -187,7 +236,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     try {
       setIsSaving(true);
 
-      const res = await fetch("/api/quotations", {
+      const response = await fetch("/api/quotations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -196,6 +245,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
             qty: Number(r.qty),
             weight: Number(r.weight),
             rate: Number(r.rate),
+            amount: Number(r.amount),
           })),
           discount,
           total,
@@ -207,14 +257,15 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
+      const data = await response.json();
+      if (!response.ok || !data.success) {
         throw new Error(data?.error || "Failed to save quotation");
       }
 
       setQuotationId(data.quotation?.quotationId || "");
-      alert("✅ Quotation saved & inventory updated!");
+      alert("✅ Quotation saved & inventory updated (profits included)!");
 
+      // Run success callback if provided
       if (onSaveSuccess) onSaveSuccess();
     } catch (err: any) {
       console.error("Error in saveQuotation:", err.message);

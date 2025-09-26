@@ -31,10 +31,12 @@ export async function POST(req: Request) {
     const quotationsCol = db.collection<Quotation>("quotations");
     const inventoryCol = db.collection("inventory");
 
-    // 1️⃣ Stock validation
-    for (const soldItem of items) {
-      const { item, qty } = soldItem;
+    const enrichedItems = [];
 
+    for (const soldItem of items) {
+      const { item, qty, weight, rate } = soldItem;
+
+      // Find in inventory
       const inventoryItem = await inventoryCol.findOne({ name: item });
       if (!inventoryItem) {
         return NextResponse.json(
@@ -52,6 +54,19 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
+
+      const costPerUnit = Number(inventoryItem.pricePerUnit);
+      const invoiceRatePerUnit = Number(rate);
+      const profitPerUnit = Math.round(invoiceRatePerUnit - costPerUnit);
+      const totalProfit = Math.round(profitPerUnit * qty);
+
+      enrichedItems.push({
+        ...soldItem,
+        costPerUnit,
+        invoiceRatePerUnit,
+        profitPerUnit,
+        totalProfit,
+      });
     }
 
     // 2️⃣ Generate quotation ID
@@ -60,10 +75,10 @@ export async function POST(req: Request) {
 
     const safePayments: Payment[] = Array.isArray(payments) ? payments : [];
 
-    // 3️⃣ Insert quotation
+    // 3️⃣ Insert enriched quotation
     const result = await quotationsCol.insertOne({
       quotationId,
-      items,
+      items: enrichedItems, // 👈 use the enriched ones
       discount,
       total,
       grandTotal,
@@ -106,7 +121,7 @@ export async function POST(req: Request) {
       quotation: {
         _id: result.insertedId,
         quotationId,
-        items,
+        items: enrichedItems,
         discount,
         total,
         grandTotal,
