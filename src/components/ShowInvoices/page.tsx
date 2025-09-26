@@ -13,9 +13,8 @@ interface Quotation {
   date: string;
   discount: number;
   amount: number;
+  total: number;
   grandTotal: number;
-  received: number;
-  balance: number;
   payments?: Payment[];
 }
 
@@ -28,6 +27,34 @@ const ShowInvoices = () => {
   const [filterOption, setFilterOption] = useState("All");
   const [errorMessage, setErrorMessage] = useState("");
 
+  const getReceived = (q: Quotation): number => {
+    return q.payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+  };
+
+  const getBalance = (q: Quotation): number => {
+    return q.grandTotal - getReceived(q);
+  };
+
+  const fetchQuotations = async () => {
+    try {
+      const query = new URLSearchParams();
+      if (filterOption !== "All") query.append("status", filterOption);
+      if (searchTerm.trim()) query.append("search", searchTerm.trim());
+
+      const res = await fetch(`/api/quotations?${query.toString()}`);
+      const data = await res.json();
+      if (data.success) {
+        setQuotations(data.quotations || []);
+      } else {
+        console.error("Fetch failed:", data.message);
+        setQuotations([]);
+      }
+    } catch (err) {
+      console.error("Error fetching quotations:", err);
+      setQuotations([]);
+    }
+  };
+
   useEffect(() => {
     if (addPaymentFor) {
       setErrorMessage("");
@@ -35,24 +62,6 @@ const ShowInvoices = () => {
   }, [addPaymentFor]);
 
   useEffect(() => {
-    const fetchQuotations = async () => {
-      try {
-        const query = new URLSearchParams();
-        if (filterOption !== "All") query.append("status", filterOption);
-        if (searchTerm.trim()) query.append("search", searchTerm.trim());
-
-        const res = await fetch(`/api/quotations?${query.toString()}`);
-        const data = await res.json();
-        if (data.success) {
-          setQuotations(data.quotations);
-        } else {
-          console.error("Fetch failed:", data.message);
-        }
-      } catch (err) {
-        console.error("Error fetching quotations:", err);
-      }
-    };
-
     fetchQuotations();
   }, [filterOption, searchTerm]);
 
@@ -60,7 +69,11 @@ const ShowInvoices = () => {
     e.preventDefault();
     if (!addPaymentFor?._id) return;
 
-    if (newPayment.amount > addPaymentFor.balance) {
+    const currentReceived = getReceived(addPaymentFor);
+    const newBalance =
+      addPaymentFor.grandTotal - (currentReceived + (newPayment.amount || 0));
+
+    if (newPayment.amount > newBalance + currentReceived) {
       setErrorMessage("You can't add more amount than Balance remaining");
       return;
     }
@@ -81,18 +94,33 @@ const ShowInvoices = () => {
       );
 
       if (!res.ok) {
-        console.error("Failed to add payment:", res.status, res.statusText);
+        const errorData = await res.json().catch(() => ({}));
+        console.error(
+          "Failed to add payment:",
+          res.status,
+          res.statusText,
+          errorData
+        );
+        setErrorMessage(
+          `Failed to add payment: ${errorData.message || res.statusText}`
+        );
         return;
       }
 
       const data = await res.json();
+      console.log("API Response:", data);
+
       if (data.success && data.quotation) {
-        setQuotations((prev) =>
-          prev.map((q) => (q._id === data.quotation._id ? data.quotation : q))
-        );
+        console.log("Updated Quotation:", data.quotation);
+        // Force re-fetch to sync with server
+        await fetchQuotations();
+      } else {
+        console.error("Invalid response format:", data);
+        setErrorMessage("Invalid server response");
       }
     } catch (err) {
       console.error("Error while adding payment:", err);
+      setErrorMessage("An error occurred while adding payment");
     } finally {
       setAddPaymentFor(null);
       setNewPayment({ amount: 0, date: "" });
@@ -140,75 +168,79 @@ const ShowInvoices = () => {
         {quotations.length === 0 ? (
           <p className="text-gray-400 text-sm">No matching invoices.</p>
         ) : (
-          quotations.map((q) => (
-            <div
-              key={q._id}
-              className="flex items-center justify-between text-white text-xs"
-            >
-              <p className="w-[100px]">{q.quotationId}</p>
-              <p className="w-[120px]">
-                {new Date(q.date).toLocaleDateString()}
-              </p>
-              <p className="w-[80px] text-center">
-                {q.discount.toLocaleString("en-US", {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                Rs
-              </p>
-              <p className="w-[100px] text-center">
-                {q.amount.toLocaleString("en-US", {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                Rs
-              </p>
-              <p className="w-[100px] text-center">
-                {q.received > 0 ? (
-                  `${q.received.toLocaleString("en-US", {
+          quotations.map((q) => {
+            const received = getReceived(q);
+            const balance = getBalance(q);
+            return (
+              <div
+                key={q._id}
+                className="flex items-center justify-between text-white text-xs"
+              >
+                <p className="w-[100px]">{q.quotationId}</p>
+                <p className="w-[120px]">
+                  {new Date(q.date).toLocaleDateString()}
+                </p>
+                <p className="w-[80px] text-center">
+                  {q.discount.toLocaleString("en-US", {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 2,
-                  })} Rs`
-                ) : (
-                  <span className="text-red-400 font-semibold">Unpaid</span>
-                )}
-              </p>
-              <p className="w-[100px] text-center">
-                {q.balance > 0 ? (
-                  `${q.balance.toLocaleString("en-US", {
+                  })}{" "}
+                  Rs
+                </p>
+                <p className="w-[100px] text-center">
+                  {q.grandTotal.toLocaleString("en-US", {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 2,
-                  })} Rs`
-                ) : (
-                  <span className="text-green-400 font-semibold">Paid</span>
-                )}
-              </p>
-              <p className="w-[120px] text-center flex gap-2">
-                <button
-                  onClick={() =>
-                    setShowPayments({
-                      ...q,
-                      payments: q.payments || [],
-                    })
-                  }
-                  className="text-blue-400 hover:cursor-pointer"
-                >
-                  View Payments
-                </button>
-                <button
-                  disabled={q.balance <= 0}
-                  onClick={() => q.balance > 0 && setAddPaymentFor(q)}
-                  className={`${
-                    q.balance <= 0
-                      ? "text-gray-500 cursor-not-allowed"
-                      : "text-green-400 hover:cursor-pointer"
-                  }`}
-                >
-                  Add Payment
-                </button>
-              </p>
-            </div>
-          ))
+                  })}{" "}
+                  Rs
+                </p>
+                <p className="w-[100px] text-center">
+                  {received > 0 ? (
+                    `${received.toLocaleString("en-US", {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2,
+                    })} Rs`
+                  ) : (
+                    <span className="text-red-400 font-semibold">Unpaid</span>
+                  )}
+                </p>
+                <p className="w-[100px] text-center">
+                  {balance > 0 ? (
+                    `${balance.toLocaleString("en-US", {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2,
+                    })} Rs`
+                  ) : (
+                    <span className="text-green-400 font-semibold">Paid</span>
+                  )}
+                </p>
+                <p className="w-[120px] text-center flex gap-2">
+                  <button
+                    onClick={() =>
+                      setShowPayments({
+                        ...q,
+                        payments: q.payments || [],
+                      })
+                    }
+                    className="text-blue-400 hover:cursor-pointer"
+                  >
+                    View Payments
+                  </button>
+                  <button
+                    disabled={balance <= 0}
+                    onClick={() => balance > 0 && setAddPaymentFor(q)}
+                    className={`${
+                      balance <= 0
+                        ? "text-gray-500 cursor-not-allowed"
+                        : "text-green-400 hover:cursor-pointer"
+                    }`}
+                  >
+                    Add Payment
+                  </button>
+                </p>
+              </div>
+            );
+          })
         )}
       </div>
 
