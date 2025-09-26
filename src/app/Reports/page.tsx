@@ -44,6 +44,13 @@
 //   const startIndex = (currentPage - 1) * pageSize;
 //   const paginatedData = quotations.slice(startIndex, startIndex + pageSize);
 
+//   // Calculate page totals
+//   const totalAmount = paginatedData.reduce((sum, q) => sum + q.grandTotal, 0);
+//   const netProfit = paginatedData.reduce(
+//     (sum, q) => sum + (q.quotationTotalProfit || 0),
+//     0
+//   );
+
 //   return (
 //     <div className="px-[75px] py-[35px] h-full flex flex-col items-center gap-[50px]">
 //       {/* Header */}
@@ -66,25 +73,42 @@
 //             </thead>
 //             <tbody>
 //               {paginatedData.length > 0 ? (
-//                 paginatedData.map((q) => (
-//                   <tr
-//                     key={q._id}
-//                     className="text-center text-sm hover:bg-gray-700"
-//                   >
-//                     <td className="border border-gray-700 p-2">
-//                       {new Date(q.date).toLocaleDateString()}
+//                 <>
+//                   {paginatedData.map((q) => (
+//                     <tr
+//                       key={q._id}
+//                       className="text-center text-sm hover:bg-gray-700"
+//                     >
+//                       <td className="border border-gray-700 p-2">
+//                         {new Date(q.date).toLocaleDateString()}
+//                       </td>
+//                       <td className="border border-gray-700 p-2">
+//                         {q.quotationId}
+//                       </td>
+//                       <td className="border border-gray-700 p-2">
+//                         {q.grandTotal.toLocaleString("en-US")} Rs
+//                       </td>
+//                       <td className="border border-gray-700 p-2 text-green-400 font-semibold">
+//                         {q.quotationTotalProfit?.toLocaleString("en-US") || 0}{" "}
+//                         Rs
+//                       </td>
+//                     </tr>
+//                   ))}
+//                   <tr className="bg-gray-800 font-bold text-center text-sm">
+//                     <td
+//                       colSpan={2}
+//                       className="border border-gray-700 p-2 text-right pr-4"
+//                     >
+//                       Totals:
 //                     </td>
 //                     <td className="border border-gray-700 p-2">
-//                       {q.quotationId}
+//                       {totalAmount.toLocaleString("en-US")} Rs
 //                     </td>
-//                     <td className="border border-gray-700 p-2">
-//                       {q.grandTotal.toLocaleString("en-US")} Rs
-//                     </td>
-//                     <td className="border border-gray-700 p-2 text-green-400 font-semibold">
-//                       {q.quotationTotalProfit?.toLocaleString("en-US") || 0} Rs
+//                     <td className="border border-gray-700 p-2 text-green-400">
+//                       {netProfit.toLocaleString("en-US")} Rs
 //                     </td>
 //                   </tr>
-//                 ))
+//                 </>
 //               ) : (
 //                 <tr>
 //                   <td colSpan={4} className="text-center text-gray-400 p-4">
@@ -96,7 +120,7 @@
 //           </table>
 //         </div>
 
-//         {/* ✅ Pagination */}
+//         {/* Pagination */}
 //         <div className="flex justify-between items-center mt-4">
 //           <button
 //             className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
@@ -133,6 +157,7 @@ interface Quotation {
   date: string;
   grandTotal: number;
   quotationTotalProfit: number;
+  status: string; // Included for type safety
 }
 
 const Reports = () => {
@@ -150,7 +175,7 @@ const Reports = () => {
 
   const fetchQuotations = async () => {
     try {
-      const res = await fetch("/api/quotations");
+      const res = await fetch("/api/quotations?status=active"); // Explicitly request active invoices
       const data = await res.json();
       if (data.success) {
         setQuotations(data.quotations || []);
@@ -164,7 +189,7 @@ const Reports = () => {
     fetchQuotations();
   }, []);
 
-  // ✅ Pagination logic
+  // Pagination logic
   const totalPages = Math.ceil(quotations.length / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedData = quotations.slice(startIndex, startIndex + pageSize);
@@ -237,7 +262,7 @@ const Reports = () => {
               ) : (
                 <tr>
                   <td colSpan={4} className="text-center text-gray-400 p-4">
-                    No records found
+                    No active records found
                   </td>
                 </tr>
               )}

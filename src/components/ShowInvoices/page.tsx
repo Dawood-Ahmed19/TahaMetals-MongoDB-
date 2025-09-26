@@ -16,6 +16,8 @@ interface Quotation {
   total: number;
   grandTotal: number;
   payments?: Payment[];
+  status: string;
+  quotationTotalProfit?: number;
 }
 
 const ShowInvoices = () => {
@@ -24,7 +26,7 @@ const ShowInvoices = () => {
   const [showPayments, setShowPayments] = useState<Quotation | null>(null);
   const [addPaymentFor, setAddPaymentFor] = useState<Quotation | null>(null);
   const [newPayment, setNewPayment] = useState({ amount: 0, date: "" });
-  const [filterOption, setFilterOption] = useState("All");
+  const [filterOption, setFilterOption] = useState("All"); // Default to "All" to show all invoices
   const [errorMessage, setErrorMessage] = useState("");
 
   const getReceived = (q: Quotation): number => {
@@ -38,11 +40,12 @@ const ShowInvoices = () => {
   const fetchQuotations = async () => {
     try {
       const query = new URLSearchParams();
-      if (filterOption !== "All") query.append("status", filterOption);
+      if (filterOption !== "All") query.append("status", filterOption); // Only add status if not "All"
       if (searchTerm.trim()) query.append("search", searchTerm.trim());
 
       const res = await fetch(`/api/quotations?${query.toString()}`);
       const data = await res.json();
+      console.log("Fetched quotations:", data.quotations); // Debug log
       if (data.success) {
         setQuotations(data.quotations || []);
       } else {
@@ -70,9 +73,8 @@ const ShowInvoices = () => {
     if (!addPaymentFor?._id) return;
 
     const currentReceived = getReceived(addPaymentFor);
-    const balance = getBalance(addPaymentFor); // ✅ simpler & correct
+    const balance = getBalance(addPaymentFor);
 
-    // ✅ Validate against remaining balance only
     if (newPayment.amount > balance) {
       setErrorMessage("You can't add more amount than Balance remaining");
       return;
@@ -112,7 +114,6 @@ const ShowInvoices = () => {
 
       if (data.success && data.quotation) {
         console.log("Updated Quotation:", data.quotation);
-        // ✅ Refresh the quotations list for live update
         await fetchQuotations();
       } else {
         console.error("Invalid response format:", data);
@@ -146,6 +147,8 @@ const ShowInvoices = () => {
             className="px-3 py-1 rounded text-sm border border-gray-600 text-white bg-fieldBg focus:ring-0 focus:outline-none"
           >
             <option value="All">All</option>
+            <option value="active">Active</option>
+            <option value="returned">Returned</option>
             <option value="Paid">Paid</option>
             <option value="Unpaid">Unpaid</option>
           </select>
@@ -171,12 +174,18 @@ const ShowInvoices = () => {
           quotations.map((q) => {
             const received = getReceived(q);
             const balance = getBalance(q);
+            const isReturned = q.status === "returned";
+
             return (
               <div
                 key={q._id}
-                className="flex items-center justify-between text-white text-xs"
+                className={`flex items-center justify-between text-white text-xs ${
+                  isReturned ? "opacity-50" : ""
+                }`}
               >
-                <p className="w-[100px]">{q.quotationId}</p>
+                <p className="w-[100px]">
+                  {q.quotationId} {isReturned ? "(returned)" : ""}
+                </p>
                 <p className="w-[120px]">
                   {new Date(q.date).toLocaleDateString()}
                 </p>
@@ -188,11 +197,7 @@ const ShowInvoices = () => {
                   Rs
                 </p>
                 <p className="w-[100px] text-center">
-                  {q.grandTotal.toLocaleString("en-US", {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 2,
-                  })}{" "}
-                  Rs
+                  {q.grandTotal.toLocaleString("en-US")} Rs
                 </p>
                 <p className="w-[100px] text-center">
                   {received > 0 ? (
@@ -244,7 +249,7 @@ const ShowInvoices = () => {
         )}
       </div>
 
-      {/* View Payments Modal */}
+      {/* Payments Modal */}
       {showPayments && (
         <div className="fixed inset-0 flex justify-center items-center">
           <div className="bg-white p-4 rounded shadow-lg w-96">

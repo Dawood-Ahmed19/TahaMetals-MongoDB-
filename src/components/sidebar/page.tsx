@@ -10,6 +10,7 @@ const sideBarItems = [
   { name: "Add Item", path: "/addItem" },
   { name: "Invoice", path: "/Invoice" },
   { name: "Reports", path: "/Reports" },
+  { name: "Return items", path: "/Returned" },
 ];
 
 export default function Sidebar() {
@@ -18,7 +19,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="w-64 px-[70px] py-[34px] bg-dashboardBg min-h-screen flex flex-col justify-between">
+    <div className="w-64 px-[60px] py-[34px] bg-dashboardBg min-h-screen flex flex-col justify-between">
       {/* Logo */}
       <div className="flex items-center justify-center">
         <h1 className="text-white text-2xl font-bold">
