@@ -14,6 +14,10 @@ export default function RootLayout({
 
   return (
     <html lang="en">
+      <head>
+        <title>Taha Metals</title>
+        <link rel="icon" href="/favicon.png" />
+      </head>
       <body className="bg-BgColor font-poppins">
         <div className="flex">
           {showSidebar && <Sidebar />}
