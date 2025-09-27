@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { generateInvoicePDF } from "@/utils/generateInvoicePDF";
 
 type QuotationRow = {
   qty: number | "";
@@ -175,54 +174,24 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     setRows(newRows);
   };
 
-  // =================== Save Quotation ===================
-  // const saveQuotation = async () => {
-  //   const validRows = rows.filter((r) => r.item && r.qty && r.rate);
+  // ========================== Reset Form ==========================
 
-  //   if (validRows.length === 0) {
-  //     alert("Please add at least one item before saving.");
-  //     return;
-  //   }
-
-  //   try {
-  //     setIsSaving(true);
-
-  //     const res = await fetch("/api/quotations", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({
-  //         items: validRows.map((r) => ({
-  //           item: r.item,
-  //           qty: Number(r.qty),
-  //           weight: Number(r.weight),
-  //           rate: Number(r.rate),
-  //         })),
-  //         discount,
-  //         total,
-  //         grandTotal,
-  //         payments:
-  //           received > 0
-  //             ? [{ amount: received, date: new Date().toISOString() }]
-  //             : [],
-  //       }),
-  //     });
-
-  //     const data = await res.json();
-  //     if (!res.ok || !data.success) {
-  //       throw new Error(data?.error || "Failed to save quotation");
-  //     }
-
-  //     setQuotationId(data.quotation?.quotationId || "");
-  //     alert("✅ Quotation saved & inventory updated!");
-
-  //     if (onSaveSuccess) onSaveSuccess();
-  //   } catch (err: any) {
-  //     console.error("Error in saveQuotation:", err.message);
-  //     alert("❌ Error saving quotation: " + err.message);
-  //   } finally {
-  //     setIsSaving(false);
-  //   }
-  // };
+  const resetForm = () => {
+    setRows(
+      Array.from({ length: 14 }, () => ({
+        qty: 0,
+        item: "",
+        weight: 0,
+        rate: 0,
+        amount: 0,
+        uniqueKey: uuidv4(),
+      }))
+    );
+    setDiscount(0);
+    setReceived(0);
+    setLoading(0);
+    setQuotationId(""); // ✅ back to Save mode
+  };
 
   // =================== Save Quotation ===================
   const saveQuotation = async () => {
@@ -272,159 +241,6 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       alert("❌ Error saving quotation: " + err.message);
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  // =================== PDF Generation ===================
-  const handleDownloadPDF = async () => {
-    try {
-      setIsGeneratingPdf(true);
-      const doc = new jsPDF({ unit: "pt", format: "a4" });
-
-      const brandX = 40,
-        brandY = 30;
-      doc.setFontSize(18);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(253, 186, 116);
-      doc.text("Taha", brandX, brandY);
-      const tahaWidth = (doc as any).getTextWidth("Taha");
-      doc.setTextColor(0, 0, 0);
-      doc.text("Metals", brandX + tahaWidth + 6, brandY);
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
-      doc.text("Invoice / Quotation", brandX, brandY + 18);
-
-      const pageWidth =
-        typeof doc.internal.pageSize.getWidth === "function"
-          ? doc.internal.pageSize.getWidth()
-          : (doc.internal.pageSize as any).width;
-      const rightX = pageWidth - 50;
-      const today = new Date().toLocaleDateString();
-      doc.setFontSize(10);
-      doc.text(`Date: ${today}`, rightX, brandY, { align: "right" });
-
-      if (quotationId) {
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(107, 114, 128);
-        doc.text(`Quotation ID: ${quotationId}`, rightX, brandY + 15, {
-          align: "right",
-        });
-        doc.setTextColor(0, 0, 0);
-      }
-
-      const head = [["Qty", "Item", "Weight", "Rate", "Amount"]];
-      const body = rows
-        .filter((r) => r.item && r.qty && r.rate)
-        .map((r) => [
-          String(r.qty),
-          r.item,
-          Number.isNaN(Number(r.weight))
-            ? "0"
-            : Number(r.weight).toLocaleString("en-US", {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2,
-              }),
-          Number.isNaN(Number(r.rate))
-            ? "0"
-            : Number(r.rate).toLocaleString("en-US", {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0, // Ensure rate is displayed as integer
-              }),
-          Number.isNaN(Number(r.amount))
-            ? "0"
-            : Number(r.amount).toLocaleString("en-US", {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2,
-              }),
-        ]);
-
-      (autoTable as any)(doc, {
-        head,
-        body,
-        startY: 100,
-        theme: "striped",
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [45, 55, 72], textColor: 255 },
-        margin: { left: 40, right: 40 },
-      });
-
-      const finalY = (doc as any).lastAutoTable.finalY + 20;
-      const rightXTotal = pageWidth - 160;
-      doc.setFontSize(11);
-      doc.text(
-        `TOTAL: ${total.toLocaleString("en-US", {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2,
-        })}`,
-        rightXTotal,
-        finalY
-      );
-      doc.text(
-        `DISCOUNT: ${discount.toLocaleString("en-US", {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2,
-        })}`,
-        rightXTotal,
-        finalY + 16
-      );
-      doc.text(
-        `BALANCE: ${balance.toLocaleString("en-US", {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2,
-        })}`,
-        rightXTotal,
-        finalY + 32
-      );
-      doc.text(
-        `LOADING: ${loading.toLocaleString("en-US", {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2,
-        })}`,
-        rightXTotal,
-        finalY + 64
-      );
-
-      doc.text(
-        `GRAND TOTAL: ${grandTotal.toLocaleString("en-US", {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2,
-        })}`,
-        rightXTotal,
-        finalY + 48
-      );
-
-      doc.setFontSize(10);
-      doc.text(
-        "Thank you for Purchasing!",
-        40,
-        (doc.internal.pageSize as any).height - 40
-      );
-
-      const filename = `invoice_${
-        quotationId || new Date().toISOString().slice(0, 10)
-      }.pdf`;
-      doc.save(filename);
-
-      // Reset
-      setRows(
-        Array.from({ length: 14 }, () => ({
-          qty: 0,
-          item: "",
-          weight: 0,
-          rate: 0,
-          amount: 0,
-          uniqueKey: uuidv4(),
-        }))
-      );
-      setDiscount(0);
-      setReceived(0);
-      setQuotationId("");
-    } catch (err) {
-      console.error("Error generating PDF:", err);
-      alert("Failed to generate PDF");
-    } finally {
-      setIsGeneratingPdf(false);
     }
   };
 
@@ -625,7 +441,11 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
           </button>
         ) : (
           <button
-            onClick={handleDownloadPDF}
+            onClick={async () => {
+              if (!quotationId) return;
+              await generateInvoicePDF(quotationId);
+              resetForm();
+            }}
             disabled={isGeneratingPdf}
             className="mt-4 bg-green-600 px-4 py-2 rounded text-white hover:cursor-pointer disabled:opacity-50"
           >
