@@ -10,7 +10,7 @@ export default function Login() {
 
   const handleLogin = () => {
     if (password === process.env.NEXT_PUBLIC_SITE_PASSWORD) {
-      sessionStorage.setItem("loggedIn", "true"); // clears on browser close
+      sessionStorage.setItem("loggedIn", "true");
       router.push("/Dashboard");
     } else {
       alert("Wrong password!");

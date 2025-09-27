@@ -30,11 +30,14 @@ const ItemSchema = new Schema<ItemSchema>({
   totalProfit: { type: Number, required: true },
 });
 
-const QuotationSchema = new Schema<QuotationDocument>({
-  quotationName: { type: String, required: true },
-  items: [ItemSchema],
-  createdAt: { type: Date, default: Date.now },
-});
+const QuotationSchema = new Schema<QuotationDocument>(
+  {
+    quotationName: { type: String, required: true },
+    items: [ItemSchema],
+    createdAt: { type: Date, default: Date.now },
+  },
+  { collection: "quotations" }
+);
 
 export default mongoose.models.Quotation ||
   mongoose.model<QuotationDocument>("Quotation", QuotationSchema);
