@@ -453,9 +453,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
         setFormData((prev) => ({ ...prev, stock: value })),
     },
   ];
-
   return (
-    <span className="bg-cardBg px-[75px] py-[55px] h-full max-w-[715px] w-full rounded-xl flex flex-col justify-between">
+    <span className="bg-cardBg px-12 py-10 h-full w-full max-w-[715px] rounded-xl flex flex-col justify-between mx-auto">
       <h1 className="font-bold text-base text-white">
         {initialData ? "Edit Item" : "Add Item"}
       </h1>

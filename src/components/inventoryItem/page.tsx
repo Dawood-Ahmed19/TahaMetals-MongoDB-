@@ -82,10 +82,11 @@ export default function InventoryItem({
 
   return (
     <div
-      className={`${inventoryGridCols} px-[80px] py-[20px] border-b border-gray-800 text-xs items-center
-      ${
-        quantity === 0 ? "bg-gray-700 text-gray-400" : "bg-fieldBg text-white"
-      }`}
+      className={`${inventoryGridCols} 
+      px-[30px] xl-only:px-[80px] py-[20px] border-b border-gray-800 
+      text-xs items-center
+      ${quantity === 0 ? "bg-gray-700 text-gray-400" : "bg-fieldBg text-white"}
+      xl-only:px-[50px] xl-only:py-[15px] xl-only:text-[14px]`}
     >
       <p>{renderValue(name, undefined, false)}</p>
       <p>{renderValue(type, undefined, false)}</p>

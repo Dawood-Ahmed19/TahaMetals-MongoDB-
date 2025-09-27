@@ -63,7 +63,12 @@ export default function InventoryCard() {
   };
 
   return (
-    <div className="max-w-[1530px] w-full bg-cardBg h-full rounded-lg py-[80px] px-[80px] flex flex-col gap-5">
+    <div
+      className="max-w-[1530px] w-full bg-cardBg h-full rounded-lg 
+      py-[80px] px-[80px] flex flex-col gap-5
+      2xl:px-[80px] 2xl:py-[80px]
+      xl-only:px-[50px] xl-only:py-[50px]"
+    >
       <span>
         <FormField
           label="Search your Item"
@@ -75,11 +80,13 @@ export default function InventoryCard() {
       </span>
 
       <span className="flex items-center gap-4 mb-4">
-        <label className="text-white text-sm">Filter by Type:</label>
+        <label className="text-white text-sm xl-only:text-xs">
+          Filter by Type:
+        </label>
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="bg-fieldBg text-white p-2 rounded"
+          className="bg-fieldBg text-white p-2 rounded text-sm xl-only:text-xs"
         >
           <option value="All">All</option>
           <option value="Hardware">Hardware</option>
@@ -89,8 +96,10 @@ export default function InventoryCard() {
       </span>
 
       <span className="max-h-[400px] overflow-y-auto">
+        {/* Header row */}
         <span
-          className={`${inventoryGridCols} px-[80px] py-[20px] bg-fieldBg border-b rounded-t-sm border-gray-600 text-white text-xs`}
+          className={`${inventoryGridCols} px-[30px] xl-only:px-[80px] py-[20px] bg-fieldBg border-b rounded-t-sm border-gray-600 
+          text-white text-xs xl-only:text-[14px]`}
         >
           <p>Item name</p>
           <p>Item type</p>
@@ -106,6 +115,7 @@ export default function InventoryCard() {
           <p>Date</p>
         </span>
 
+        {/* Data rows */}
         {items.map((item) => {
           const pricePerKg = item.pricePerKg ?? "N/A";
           const unitPrice = item.pricePerUnit ?? "N/A";

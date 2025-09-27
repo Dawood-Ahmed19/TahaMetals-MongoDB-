@@ -50,7 +50,10 @@ export default function DashboardScreen() {
   }, []);
 
   return (
-    <div className="px-[75px] py-[35px] h-full flex flex-col items-center gap-[50px]">
+    <div
+      className="px-[75px] py-[35px] h-full flex flex-col items-center gap-[50px] 
+     2xl:max-w-[1600px] 2xl:mx-auto xl-only:max-w-[1200px] xl-only:mx-auto w-full"
+    >
       {/* Header */}
       <span className="flex justify-between w-full">
         <h1 className="text-xl font-bold text-white">Dashboard</h1>

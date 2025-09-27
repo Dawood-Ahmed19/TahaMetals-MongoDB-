@@ -33,3 +33,20 @@
     display: none !important;
   }
 }
+
+@layer utilities {
+  @variants responsive {
+    @media (min-width: 1280px) and (max-width: 1919px) {
+      .xl-only\:text-sm {
+        @apply text-sm;
+      }
+      .xl-only\:bg-red-500 {
+        @apply bg-red-500;
+      }
+      .xl-only\:p-4 {
+        @apply p-4;
+      }
+      /* Add more classes as needed */
+    }
+  }
+}

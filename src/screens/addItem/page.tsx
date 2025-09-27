@@ -1,4 +1,4 @@
-"use Client";
+"use client";
 
 import ItemCard from "@/components/itemCard/page";
 
@@ -13,8 +13,8 @@ const AddItem = () => {
   });
 
   return (
-    <div className="px-[75px] py-[35px] h-full flex flex-col items-center gap-[50px]">
-      <span className="flex justify-between w-full">
+    <div className="max-w-[1280px] mx-auto px-12 py-8 h-full flex flex-col gap-12">
+      <span className="flex justify-between items-center w-full">
         <h1 className="text-xl font-bold text-white">Add Item to Inventory</h1>
         <p className="text-sm text-white">{formattedDate}</p>
       </span>

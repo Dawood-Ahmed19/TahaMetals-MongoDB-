@@ -53,7 +53,12 @@ const Reports = () => {
   );
 
   return (
-    <div className="px-[75px] py-[35px] h-full flex flex-col items-center gap-[50px]">
+    <div
+      className="h-full flex flex-col items-center gap-[50px] 
+      px-[75px] py-[35px] 
+      2xl:px-[75px] 2xl:py-[35px] 
+      xl-only:px-[40px] xl-only:py-[25px] xl-only:gap-[35px]"
+    >
       {/* Header */}
       <span className="flex justify-between w-full">
         <h1 className="text-xl font-bold text-white">Business Reports</h1>
@@ -62,8 +67,8 @@ const Reports = () => {
 
       {/* Table */}
       <span className="w-full h-full max-h-[700px]">
-        <div className="h-full w-full">
-          <table className="w-full text-white border-collapse">
+        <div className="h-full w-full overflow-x-auto">
+          <table className="w-full text-white border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-gray-800 text-center text-sm">
                 <th className="border border-gray-600 p-3">Date</th>
