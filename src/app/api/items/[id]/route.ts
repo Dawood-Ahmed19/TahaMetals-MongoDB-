@@ -11,7 +11,7 @@ export async function GET(
     const db = client.db("TahaMetals");
     const collection = db.collection("inventory");
 
-    const id = params.id as string; // Explicit type assertion
+    const id = params.id as string;
     const item = await collection.findOne({ _id: new ObjectId(id) });
 
     if (!item) {

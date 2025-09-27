@@ -6,7 +6,13 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    router.push("/Dashboard");
+    const loggedIn = sessionStorage.getItem("loggedIn");
+
+    if (loggedIn === "true") {
+      router.push("/Dashboard");
+    } else {
+      router.push("/Login");
+    }
   }, [router]);
 
   return null;
