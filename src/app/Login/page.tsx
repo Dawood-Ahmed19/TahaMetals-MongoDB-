@@ -2,20 +2,37 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Loader from "@/components/Loader/page";
 
 export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false); // loader state
   const router = useRouter();
 
   const handleLogin = () => {
     if (password === process.env.NEXT_PUBLIC_SITE_PASSWORD) {
-      sessionStorage.setItem("loggedIn", "true");
-      router.push("/Dashboard");
+      setLoading(true); // show loader
+
+      // simulate small delay (API/auth)
+      setTimeout(() => {
+        sessionStorage.setItem("loggedIn", "true");
+        router.push("/Dashboard");
+      }, 1500);
     } else {
       alert("Wrong password!");
     }
   };
+
+  // show loader if login in progress
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <Loader />
+        <p className="mt-4 text-gray-600 font-medium">Logging in...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center h-screen bg-gray-100">
