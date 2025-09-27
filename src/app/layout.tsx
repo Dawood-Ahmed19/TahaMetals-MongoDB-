@@ -17,6 +17,8 @@ export default function RootLayout({
       <head>
         <title>Taha Metals</title>
         <link rel="icon" href="/favicon.png" />
+        <meta name="theme-color" content="#2563eb" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className="bg-BgColor font-poppins">
         <div className="flex">
