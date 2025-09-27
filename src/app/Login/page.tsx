@@ -41,13 +41,6 @@ export default function Login() {
           TahaMetals Login
         </h1>
 
-        <label
-          htmlFor="password"
-          className="block mb-2 font-medium text-gray-700"
-        >
-          Enter Password
-        </label>
-
         <div className="relative w-full mb-6">
           <input
             id="password"
