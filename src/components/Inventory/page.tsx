@@ -95,7 +95,7 @@ export default function InventoryCard() {
         </select>
       </span>
 
-      <span className="max-h-[400px] overflow-y-auto">
+      <span className="max-h-[800px] overflow-y-auto">
         {/* Header row */}
         <span
           className={`${inventoryGridCols} px-[30px] xl-only:px-[80px] py-[20px] bg-fieldBg border-b rounded-t-sm border-gray-600 
@@ -107,6 +107,7 @@ export default function InventoryCard() {
           <p>Gauge</p>
           <p>Gote</p>
           <p>Size</p>
+          <p>Height (FT)</p>
           <p>Weight (KG)</p>
           <p>Quantity Available</p>
           <p>Price Per KG</p>

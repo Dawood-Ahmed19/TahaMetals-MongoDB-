@@ -13,6 +13,7 @@ interface InventoryItemsProps {
   gote?: number | string | null;
   guage?: number | string | null;
   size?: number | string | null;
+  height?: number | null;
   weight?: number | null;
   quantity: number;
   pricePerKg?: number | string | null;
@@ -29,6 +30,7 @@ export default function InventoryItem({
   gote,
   guage,
   size,
+  height,
   weight,
   quantity,
   pricePerKg,
@@ -94,6 +96,7 @@ export default function InventoryItem({
       <p>{renderValue(guage, undefined, true)}</p>
       <p>{renderValue(gote, undefined, true)}</p>
       <p>{renderValue(size, undefined, true)}</p>
+      <p>{renderValue(height, undefined, true)}</p>
       <p>
         {isBand
           ? renderValue("N/A", "KG", true)

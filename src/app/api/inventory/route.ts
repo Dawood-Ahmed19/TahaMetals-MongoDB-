@@ -12,16 +12,19 @@ interface InventoryItem {
   size: string;
   weight: number;
   quantity: number;
-  pricePerKg?: number | null; // ✅ make them safe
-  pricePerUnit?: number | null; // ✅ make them safe
+  pricePerKg?: number | null;
+  pricePerUnit?: number | null;
   date: string;
   index?: number;
   height?: string | null;
-  color?: string; // ✅ add this
+  color?: string;
 }
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json();
+    console.log("📦 Incoming body →", body);
+
     let {
       name,
       type,
@@ -35,52 +38,79 @@ export async function POST(req: Request) {
       pricePerUnit,
       height,
       color,
-    } = await req.json();
+    } = body;
 
-    // ✅ Normalize
-    type = String(type).trim().toLowerCase();
+    // Normalize
+    type = String(type || "")
+      .trim()
+      .toLowerCase();
     pipeType = String(pipeType || "")
       .trim()
       .toLowerCase();
     guage = guage ? String(guage).trim().toLowerCase() : "";
     gote = gote ? String(gote).trim().toLowerCase() : "";
-    size = String(size).trim().toLowerCase();
-    weight = Number(weight);
-    quantity = Number(quantity);
+    size = String(size || "")
+      .trim()
+      .toLowerCase();
+
+    weight = Number(weight) || 0;
+    quantity = Number(quantity) || 0;
     pricePerKg = pricePerKg ? Number(pricePerKg) : null;
     pricePerUnit = pricePerUnit ? Number(pricePerUnit) : null;
 
-    // ✅ Calculate pricePerUnit if pricePerKg is provided
     if (pricePerKg && quantity > 0 && weight > 0) {
       const unitWeight = weight / quantity;
       pricePerUnit = Number((unitWeight * pricePerKg).toFixed(2));
     }
 
-    let itemName = name;
-    let itemIndex: number | undefined;
-
     const client = await clientPromise;
     const db = client.db("TahaMetals");
     const collection = db.collection<InventoryItem>("inventory");
 
-    // Auto-generate Pipe Code for pipes
+    let itemName = name?.trim() || "";
+    let itemIndex: number | undefined;
+
+    // Auto-generate for pipes
     if (type === "pipe") {
-      const lastPipes = await collection
+      const lastPipe = await collection
         .find({ type: "pipe" })
         .sort({ index: -1 })
         .limit(1)
         .toArray();
 
       const nextNumber =
-        lastPipes.length > 0 && lastPipes[0].index !== undefined
-          ? lastPipes[0].index + 1
+        lastPipe.length > 0 && lastPipe[0].index !== undefined
+          ? lastPipe[0].index + 1
           : 1;
 
       itemName = `p${String(nextNumber).padStart(3, "0")}`;
       itemIndex = nextNumber;
     }
 
-    // Insert new item
+    // Auto-generate for pillars (singular OR plural)
+    if (type === "pillar" || type === "pillars") {
+      const lastPillar = await collection
+        .find({ type: { $in: ["pillar", "pillars"] } })
+        .sort({ index: -1 })
+        .limit(1)
+        .toArray();
+
+      const nextNumber =
+        lastPillar.length > 0 && lastPillar[0].index !== undefined
+          ? lastPillar[0].index + 1
+          : 1;
+
+      itemName = `pl${String(nextNumber).padStart(3, "0")}`;
+      itemIndex = nextNumber;
+    }
+
+    // Always fallback to avoid empty names
+    if (!itemName) {
+      itemName = "unnamed";
+    }
+
+    console.log("✅ Final type:", type, "→ Generated name:", itemName);
+
     const newItem = await collection.insertOne({
       name: itemName,
       type,
@@ -100,7 +130,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "New item created ✅",
+      message: "Item created ✅",
       item: {
         _id: newItem.insertedId.toString(),
         name: itemName,
@@ -120,9 +150,9 @@ export async function POST(req: Request) {
       },
     });
   } catch (err) {
-    console.error("Error in inventory POST:", err);
+    console.error("❌ Error in inventory POST:", err);
     return NextResponse.json(
-      { success: false, error: "Failed to add/update item ❌" },
+      { success: false, error: "Failed to add item ❌" },
       { status: 500 }
     );
   }
@@ -136,7 +166,6 @@ export async function GET() {
 
     const items = await collection.find({}).toArray();
 
-    // Convert ObjectId → string for frontend
     const safeItems = items.map((item) => ({
       ...item,
       _id: item._id?.toString(),
@@ -144,7 +173,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, items: safeItems });
   } catch (err) {
-    console.error("Error fetching inventory:", err);
+    console.error("❌ Error fetching inventory:", err);
     return NextResponse.json({ success: false, items: [] }, { status: 500 });
   }
 }

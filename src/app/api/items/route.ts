@@ -105,11 +105,13 @@ export async function GET(req: Request) {
   }
 }
 
-// POST (merged handler)
+// POST (merged handler with auto-naming for pipes & pillars)
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const normalized = normalizeItem(body); // Apply normalization from existing handler
+    const normalized = normalizeItem(body); // Apply normalization
+    let itemName = normalized.name;
+    let itemIndex: number | undefined;
 
     const client = await clientPromise;
     const db = client.db("TahaMetals");
@@ -162,10 +164,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Auto-generate Pipe Code for new pipes
-    let itemName = normalized.name;
-    let itemIndex: number | undefined;
-    if (!itemName && normalized.type?.toLowerCase() === "pipe") {
+    // Auto-generate Pipe Code
+    if (!itemName && normalized.type === "pipe") {
       const lastPipe = await collection
         .find({ type: "pipe" })
         .sort({ index: -1 })
@@ -183,10 +183,38 @@ export async function POST(req: Request) {
       itemIndex = nextNumber;
     }
 
-    // Insert new item (merged logic from [id]/route.ts)
+    // Auto-generate Pillar Code
+    if (
+      !itemName &&
+      (normalized.type === "pillar" || normalized.type === "pillars")
+    ) {
+      const lastPillar = await collection
+        .find({ type: { $in: ["pillar", "pillars"] } })
+        .sort({ index: -1 })
+        .limit(1)
+        .toArray();
+
+      const nextNumber =
+        lastPillar.length > 0 && lastPillar[0].index !== undefined
+          ? lastPillar[0].index + 1
+          : 1;
+
+      itemName = `pl${String(nextNumber).padStart(3, "0")}`;
+      normalized.name = itemName;
+      normalized.index = nextNumber;
+      itemIndex = nextNumber;
+    }
+
+    // ✅ Guarantee name is never empty
+    if (!itemName) {
+      itemName = "unnamed";
+      normalized.name = itemName;
+    }
+
+    // Insert new item
     const newItem = await collection.insertOne({
       ...normalized,
-      name: itemName || normalized.name,
+      name: itemName,
       index: itemIndex ?? 1,
       date: new Date().toISOString(),
     });
@@ -194,12 +222,12 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         success: true,
-        item: { _id: newItem.insertedId, ...normalized },
+        item: { _id: newItem.insertedId, ...normalized, name: itemName },
       },
-      { status: 201 } // Use 201 for new resource creation
+      { status: 201 } // 201 for resource creation
     );
   } catch (err) {
-    console.error("Error saving item:", err);
+    console.error("❌ Error saving item:", err);
     return NextResponse.json(
       { success: false, error: "Failed to save item" },
       { status: 500 }
