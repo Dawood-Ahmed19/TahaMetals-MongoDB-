@@ -39,6 +39,27 @@ export const generateInvoicePDF = async (quotationId: string) => {
     const quotation: Quotation = data.quotation;
     const items = quotation.items || [];
 
+    // Fetch inventory to map original names to display names
+    const inventoryRes = await fetch("/api/inventory");
+    if (!inventoryRes.ok) {
+      console.error("❌ Failed to fetch inventory:", await inventoryRes.text());
+      alert("Failed to fetch inventory data for PDF.");
+      return;
+    }
+    const inventoryData = await inventoryRes.json();
+    const inventoryItems = inventoryData.success
+      ? inventoryData.items || []
+      : [];
+
+    // Map original item names (e.g., "p001") to display names (e.g., "pipe 5/8")
+    const getDisplayItem = (itemName: string) => {
+      const invItem = inventoryItems.find((inv: any) => inv.name === itemName);
+      if (invItem) {
+        return `${invItem.type} ${invItem.size || ""}`.trim();
+      }
+      return itemName; // Fallback to original name if not found
+    };
+
     // --- PDF setup ---
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const brandX = 40,
@@ -76,10 +97,11 @@ export const generateInvoicePDF = async (quotationId: string) => {
     }
 
     // Table
-    const head = [["Qty", "Item", "Weight", "Rate", "Amount"]];
+    const head = [["Qty", "Item", "Guage", "Weight", "Rate", "Amount"]];
     const body = items.map((r: any) => [
       String(r.qty),
-      r.item,
+      getDisplayItem(r.item), // Map to display name
+      r.guage || "", // Add Guage column
       Number(r.weight).toLocaleString("en-US", { maximumFractionDigits: 2 }),
       Number(r.rate).toLocaleString("en-US"),
       Number(r.amount).toLocaleString("en-US", { maximumFractionDigits: 2 }),

@@ -11,6 +11,7 @@ type QuotationRow = {
   rate: number | "";
   amount: number;
   uniqueKey: string;
+  guage: string | number | "";
 };
 
 interface InventoryItem {
@@ -20,6 +21,8 @@ interface InventoryItem {
   quantity: number;
   pricePerKg?: number;
   pricePerUnit?: number;
+  size?: string;
+  guage?: string | number;
 }
 
 const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
@@ -33,6 +36,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       rate: 0,
       amount: 0,
       uniqueKey: uuidv4(),
+      guage: "",
     }))
   );
 
@@ -50,7 +54,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         const res = await fetch("/api/inventory");
         const data = await res.json();
         if (data.success) {
-          console.log("Fetched Inventory Items:", data.items);
+          console.log("Fetched Inventory Items with Guage:", data.items);
           setInventoryItems(data.items || []);
         } else {
           console.error("Fetch failed:", data.message);
@@ -70,10 +74,11 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     let weight = 0;
     let rate = 0;
     let amount = 0;
+    let guage = "";
 
     if (!selected || !selected.name) {
       console.warn("Invalid selected item:", selected);
-      return { weight, rate, amount };
+      return { weight, rate, amount, guage };
     }
 
     if (
@@ -88,16 +93,15 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     } else {
       const singlePieceWeight =
         selected.quantity > 0 ? (selected.weight ?? 0) / selected.quantity : 0;
-
       const sellingPricePerKg = selected.pricePerKg ?? 0;
       const unitPrice = Math.round(singlePieceWeight * sellingPricePerKg);
-
       weight = qty * singlePieceWeight;
       rate = unitPrice;
       amount = qty * rate;
     }
 
-    return { weight, rate, amount };
+    guage = selected.guage !== undefined ? selected.guage.toString() : "";
+    return { weight, rate, amount, guage };
   };
 
   // =================== HandleChange ===================
@@ -113,15 +117,17 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     if (field === "item") {
       const selected = inventoryItems.find((inv) => inv.name === value);
       if (selected) {
+        const displayItem = `${selected.type} ${selected.size || ""}`.trim();
         const qty = newRows[index].qty || 1;
-        const { weight, rate, amount } = calculateRow(selected, qty);
+        const { weight, rate, amount, guage } = calculateRow(selected, qty);
         newRows[index] = {
           ...newRows[index],
-          item: value,
+          item: displayItem,
           qty,
           weight,
           rate,
           amount,
+          guage,
         };
       } else {
         newRows[index] = {
@@ -130,11 +136,14 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
           rate: 0,
           weight: 0,
           amount: 0,
-        }; // Reset if no item
+          guage: "",
+        };
       }
     } else if (field === "qty") {
+      const [type, size] = newRows[index].item.split(" "); // Match full item (type and size)
       const selected = inventoryItems.find(
-        (inv) => inv.name === newRows[index].item
+        (inv) =>
+          inv.type.toLowerCase() === type.toLowerCase() && inv.size === size
       );
       if (selected) {
         if (numValue > selected.quantity) {
@@ -142,24 +151,18 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
           alert(`Only ${selected.quantity} units available in stock!`);
         }
         newRows[index] = { ...newRows[index], qty: numValue };
-        if (numValue > 0) {
-          const { weight, rate, amount } = calculateRow(selected, numValue);
-          newRows[index].weight = weight;
-          newRows[index].rate = rate;
-          newRows[index].amount = amount;
-        } else {
-          newRows[index].weight = 0;
-          newRows[index].rate = 0;
-          newRows[index].amount = 0;
-        }
+        const { weight, rate, amount, guage } = calculateRow(
+          selected,
+          numValue
+        );
+        newRows[index].weight = weight;
+        newRows[index].rate = rate;
+        newRows[index].amount = amount;
+        newRows[index].guage = guage;
       } else {
-        newRows[index].qty = numValue;
-        newRows[index].weight = 0;
-        newRows[index].rate = 0;
-        newRows[index].amount = 0;
+        newRows[index].qty = numValue; // Only update qty, preserve other fields
       }
     } else if (field === "rate") {
-      // Ensure rate is an integer
       numValue = Math.round(numValue);
       newRows[index] = { ...newRows[index], rate: numValue };
       const qty = Number(newRows[index].qty) || 0;
@@ -185,12 +188,13 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         rate: 0,
         amount: 0,
         uniqueKey: uuidv4(),
+        guage: "",
       }))
     );
     setDiscount(0);
     setReceived(0);
     setLoading(0);
-    setQuotationId(""); // ✅ back to Save mode
+    setQuotationId("");
   };
 
   // =================== Save Quotation ===================
@@ -205,17 +209,50 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     try {
       setIsSaving(true);
 
+      // Deduct stock for each valid row
+      for (const row of validRows) {
+        const [type] = row.item.split(" "); // Extract type to find original name
+        const selectedItem = inventoryItems.find(
+          (inv) =>
+            inv.type.toLowerCase() === type.toLowerCase() &&
+            inv.size === row.item.split(" ")[1]
+        );
+        if (selectedItem) {
+          const deductQty = Number(row.qty);
+          const deductWeight = Number(row.weight);
+
+          await fetch("/api/inventory", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: selectedItem.name, // Use original name (e.g., "p001")
+              qty: deductQty,
+              weight: deductWeight,
+            }),
+          });
+        }
+      }
+
       const response = await fetch("/api/quotations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: validRows.map((r) => ({
-            item: r.item,
-            qty: Number(r.qty),
-            weight: Number(r.weight),
-            rate: Number(r.rate),
-            amount: Number(r.amount),
-          })),
+          items: validRows.map((r) => {
+            const [type] = r.item.split(" ");
+            const selected = inventoryItems.find(
+              (inv) =>
+                inv.type.toLowerCase() === type.toLowerCase() &&
+                inv.size === r.item.split(" ")[1]
+            );
+            return {
+              item: selected ? selected.name : r.item,
+              qty: Number(r.qty),
+              weight: Number(r.weight),
+              rate: Number(r.rate),
+              amount: Number(r.amount),
+              guage: selected ? selected.guage : r.guage,
+            };
+          }),
           discount,
           total,
           grandTotal,
@@ -234,7 +271,6 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       setQuotationId(data.quotation?.quotationId || "");
       alert("✅ Quotation saved & inventory updated (profits included)!");
 
-      // Run success callback if provided
       if (onSaveSuccess) onSaveSuccess();
     } catch (err: any) {
       console.error("Error in saveQuotation:", err.message);
@@ -258,9 +294,10 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
             <tr className="bg-gray-800 text-center">
               <th className="border border-white p-2 w-[60px]">Qty</th>
               <th className="border border-white p-2 w-[180px]">Item</th>
-              <th className="border border-white p-2 w-[100px]">Weight</th>
-              <th className="border border-white p-2 w-[120px]">Rate</th>
-              <th className="border border-white p-2 w-[140px]">Amount</th>
+              <th className="border border-white p-2 w-[80px]">Guage</th>
+              <th className="border border-white p-2 w-[80px]">Weight</th>
+              <th className="border border-white p-2 w-[100px]">Rate</th>
+              <th className="border border-white p-2 w-[100px]">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -284,8 +321,9 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                     }}
                     className="bg-transparent text-center w-full outline-none"
                     max={
-                      inventoryItems.find((inv) => inv.name === row.item)
-                        ?.quantity || undefined
+                      inventoryItems.find(
+                        (inv) => inv.name === row.item.split(" ")[0]
+                      )?.quantity || undefined
                     }
                   />
                 </td>
@@ -309,6 +347,19 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
 
                 <td className="border border-white">
                   <input
+                    type="text"
+                    value={
+                      row.guage && !Number.isNaN(Number(row.guage))
+                        ? row.guage.toString()
+                        : row.guage || ""
+                    }
+                    readOnly
+                    className="bg-transparent text-center w-full outline-none"
+                  />
+                </td>
+
+                <td className="border border-white">
+                  <input
                     min={0}
                     type="text"
                     value={
@@ -328,7 +379,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                   <input
                     min={0}
                     type="number"
-                    step={1} // Restrict to integers
+                    step={1}
                     value={Number.isNaN(row.rate) ? "" : row.rate}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -357,7 +408,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
 
             {/* Totals */}
             <tr className="bg-gray-800 font-bold">
-              <td colSpan={3} />
+              <td colSpan={4} />
               <td className="border border-white text-center">TOTAL</td>
               <td className="border border-white text-center">
                 {total.toLocaleString("en-US", {
@@ -367,7 +418,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
               </td>
             </tr>
             <tr className="bg-gray-800 font-bold">
-              <td colSpan={3} />
+              <td colSpan={4} />
               <td className="border border-white text-center">DISCOUNT</td>
               <td className="border border-white text-center">
                 <input
@@ -380,7 +431,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
               </td>
             </tr>
             <tr className="bg-gray-800 font-bold">
-              <td colSpan={3} />
+              <td colSpan={4} />
               <td className="border border-white text-center">RECEIVED</td>
               <td className="border border-white text-center">
                 <input
@@ -393,7 +444,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
               </td>
             </tr>
             <tr className="bg-gray-800 font-bold">
-              <td colSpan={3} />
+              <td colSpan={4} />
               <td className="border border-white text-center">BALANCE</td>
               <td className="border border-white text-center">
                 {balance.toLocaleString("en-US", {
@@ -403,7 +454,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
               </td>
             </tr>
             <tr className="bg-gray-800 font-bold">
-              <td colSpan={3} />
+              <td colSpan={4} />
               <td className="border border-white text-center">LOADING</td>
               <td className="border border-white text-center">
                 <input
@@ -417,7 +468,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
             </tr>
 
             <tr className="bg-gray-800 font-bold">
-              <td colSpan={3} />
+              <td colSpan={4} />
               <td className="border border-white text-center">GRAND TOTAL</td>
               <td className="border border-white text-center">
                 {grandTotal.toLocaleString("en-US", {
@@ -435,7 +486,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
           <button
             onClick={saveQuotation}
             disabled={isSaving}
-            className="mt-4 bg-blue-600 px-4 py-2 rounded text-white hover:cursor-pointer disabled:opacity-50"
+            className="mt-5 bg-blue-600 px-4 py-2 rounded text-white hover:cursor-pointer disabled:opacity-50"
           >
             {isSaving ? "Loading..." : "Save"}
           </button>
@@ -447,7 +498,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
               resetForm();
             }}
             disabled={isGeneratingPdf}
-            className="mt-4 bg-green-600 px-4 py-2 rounded text-white hover:cursor-pointer disabled:opacity-50"
+            className="mt-5 bg-green-600 px-4 py-2 rounded text-white hover:cursor-pointer disabled:opacity-50"
           >
             {isGeneratingPdf ? "Generating..." : "Download PDF"}
           </button>
