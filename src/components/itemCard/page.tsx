@@ -49,6 +49,7 @@ const AdditionalSquareItemSizeOptions = [
   '1/2" x 1-1/2"',
   '1/2" x 1"',
   '3/4" x 3/8"',
+  `1" x 3"`,
 ];
 const RoundItemSizeOptions = [
   '4"',
