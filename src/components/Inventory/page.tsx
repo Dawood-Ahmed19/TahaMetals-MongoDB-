@@ -64,7 +64,7 @@ export default function InventoryCard() {
 
   return (
     <div
-      className="max-w-[1530px] w-full bg-cardBg h-full rounded-lg 
+      className="max-w-[1530px] w-full bg-cardBg max-h-[750px] rounded-lg 
       py-[80px] px-[80px] flex flex-col gap-5
       2xl:px-[80px] 2xl:py-[80px]
       xl-only:px-[50px] xl-only:py-[50px]"
