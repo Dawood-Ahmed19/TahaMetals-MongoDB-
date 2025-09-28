@@ -103,10 +103,10 @@ export default function InventoryCard() {
         >
           <p>Item name</p>
           <p>Item type</p>
+          <p>Size</p>
           <p>Color</p>
           <p>Gauge</p>
           <p>Gote</p>
-          <p>Size</p>
           <p>Height (FT)</p>
           <p>Weight (KG)</p>
           <p>Quantity Available</p>

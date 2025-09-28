@@ -84,24 +84,28 @@ export default function InventoryItem({
 
   return (
     <div
-      className={`${inventoryGridCols} 
-      px-[30px] xl-only:px-[80px] py-[20px] border-b border-gray-800 
+      className={`${inventoryGridCols}
+      px-[30px] xl-only:px-[80px] py-[20px] border-b border-gray-800
       text-xs items-center
       ${quantity === 0 ? "bg-gray-700 text-gray-400" : "bg-fieldBg text-white"}
       xl-only:px-[50px] xl-only:py-[15px] xl-only:text-[14px]`}
     >
       <p>{renderValue(name, undefined, false)}</p>
       <p>{renderValue(type, undefined, false)}</p>
+      <p>{renderValue(size, undefined, true)}</p>
       <p>{renderValue(color, undefined, true)}</p>
       <p>{renderValue(guage, undefined, true)}</p>
       <p>{renderValue(gote, undefined, true)}</p>
-      <p>{renderValue(size, undefined, true)}</p>
+
       <p>{renderValue(height, undefined, true)}</p>
       <p>
         {isBand
-          ? renderValue("N/A", "KG", true)
-          : renderValue(weight !== undefined ? weight : "N/A", "KG", true)}
+          ? renderValue("N/A", "kg", true)
+          : type?.toLowerCase().includes("pillar")
+          ? renderValue(unitPrice, "PKR", true)
+          : renderValue(weight, "kg", true)}{" "}
       </p>
+
       <p>
         {quantity === 0 ? (
           <span className="text-red-500 font-semibold">Out of Stock</span>

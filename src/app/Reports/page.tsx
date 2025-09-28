@@ -40,12 +40,10 @@ const Reports = () => {
     fetchQuotations();
   }, []);
 
-  // Pagination logic
   const totalPages = Math.ceil(quotations.length / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedData = quotations.slice(startIndex, startIndex + pageSize);
 
-  // Calculate page totals
   const totalAmount = paginatedData.reduce((sum, q) => sum + q.grandTotal, 0);
   const netProfit = paginatedData.reduce(
     (sum, q) => sum + (q.quotationTotalProfit || 0),

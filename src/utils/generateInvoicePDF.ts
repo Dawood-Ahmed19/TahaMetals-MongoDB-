@@ -19,7 +19,6 @@ interface Quotation {
 
 export const generateInvoicePDF = async (quotationId: string) => {
   try {
-    // ✅ Fetch by Mongo _id
     const res = await fetch(`/api/quotations/${quotationId}`);
 
     if (!res.ok) {
