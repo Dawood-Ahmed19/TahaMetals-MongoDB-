@@ -51,13 +51,16 @@ export const generateInvoicePDF = async (quotationId: string) => {
       ? inventoryData.items || []
       : [];
 
-    // Map original item names (e.g., "p001") to display names (e.g., "pipe 5/8")
+    // ✅ Map display name properly
     const getDisplayItem = (itemName: string) => {
       const invItem = inventoryItems.find((inv: any) => inv.name === itemName);
       if (invItem) {
+        if (invItem.type.toLowerCase() === "hardware") {
+          return `${invItem.name} ${invItem.size || ""}`.trim();
+        }
         return `${invItem.type} ${invItem.size || ""}`.trim();
       }
-      return itemName; // Fallback to original name if not found
+      return itemName; // fallback if not found
     };
 
     // --- PDF setup ---
@@ -100,8 +103,8 @@ export const generateInvoicePDF = async (quotationId: string) => {
     const head = [["Qty", "Item", "Guage", "Weight", "Rate", "Amount"]];
     const body = items.map((r: any) => [
       String(r.qty),
-      getDisplayItem(r.item), // Map to display name
-      r.guage || "", // Add Guage column
+      getDisplayItem(r.item), // ✅ Correct display
+      r.guage || "",
       Number(r.weight).toLocaleString("en-US", { maximumFractionDigits: 2 }),
       Number(r.rate).toLocaleString("en-US"),
       Number(r.amount).toLocaleString("en-US", { maximumFractionDigits: 2 }),
