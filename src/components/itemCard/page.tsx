@@ -19,6 +19,10 @@ const BandSizeOptions = [
   '3"',
   '4"',
 ];
+
+const RingSize = [`2"`, `3"`];
+const StarSize = [`2"`, `3"`, `4"`];
+
 const CuttBallSizeOptions = [
   '1/2"',
   '5/8"',
@@ -36,6 +40,8 @@ const SquareItemSizeOptions = [
   '1-1/4" x 1-1/4"',
   '1" x 1"',
 ];
+
+const VipBallsSize = [];
 
 const AdditionalSquareItemSizePillars = [`1" x 1 - 1/2"`, `1" x 2"`];
 
@@ -70,6 +76,11 @@ const HardwareItemNameOptions = [
   "Draz",
   "Rod",
   "Gote",
+  "Ring",
+  "VIP Ball",
+  "Stopper",
+  "Star",
+  "Chutkni",
 ];
 
 const PlateSizeRoundOptions = [
@@ -118,7 +129,7 @@ const BasecupSizeSquareOptions = [
 const RodSizeOptions = ["14", "12"];
 const DarazSizeOptions = ['8"', '12"', '18"'];
 const CuttBallColorOptions = ["Silver", "Golden", "Multi"];
-
+const RingColorOptions = ["Silver", "Golden"];
 interface ItemCardProps {
   initialData?: {
     id: string;
@@ -202,6 +213,14 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     formData.itemType === "Hardware" && formData.itemName === "Rod";
   const isHardwareGote =
     formData.itemType === "Hardware" && formData.itemName === "Gote";
+  const isHardwareStopper =
+    formData.itemType === "Hardware" && formData.itemName === "Stopper";
+  const isHardwareRing =
+    formData.itemType === "Hardware" && formData.itemName === "Ring";
+  const isHardwareStar =
+    formData.itemType === "Hardware" && formData.itemName === "Star";
+  const isHardwareBalls =
+    formData.itemType === "Hardware" && formData.itemName === "VIP Ball";
 
   // ================= Handle submit =====================
 
@@ -223,6 +242,12 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       isHardware && formData.itemName?.toLowerCase() === "plate";
     const isHardwareBasecup =
       isHardware && formData.itemName?.toLowerCase() === "basecup";
+    const isHardwareStopper =
+      isHardware && formData.itemName?.toLowerCase() === "stopper";
+    const isHardwareRing =
+      formData.itemType === "Hardware" && formData.itemName === "Ring";
+    const isHardwareBalls =
+      formData.itemType === "Hardware" && formData.itemName === "VIP Ball";
 
     // ✅ Validation
     if (
@@ -230,7 +255,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       (isPipe && !formData.pipeType) ||
       (isPillars && !formData.pipeType) ||
       (isHardware && !formData.itemName) ||
-      ((isHardwarePlate || isHardwareBasecup) && !formData.pipeType) ||
+      ((isHardwarePlate || isHardwareBasecup || isHardwareStopper) &&
+        !formData.pipeType) ||
       // itemSize is required unless: Pillars + Fancy
       (formData.itemType === "Pillars" && formData.pipeType === "Fancy"
         ? false
@@ -249,7 +275,6 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       return;
     }
 
-    // ✅ Build payload
     const newItem: any = {
       type: formData.itemType?.toLowerCase(),
       pipeType: formData.pipeType,
@@ -262,7 +287,6 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       color: formData.color,
     };
 
-    // ✅ Only hardware items use manual name
     if (isHardware) {
       newItem.name = formData.itemName?.trim();
     }
@@ -274,7 +298,11 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       isHardwareDraz ||
       isPillars ||
       isHardwareGote ||
-      isHardwareBasecup
+      isHardwareBasecup ||
+      isHardwareStopper ||
+      isHardwareRing ||
+      isHardwareStar ||
+      isHardwareBalls
     ) {
       newItem.pricePerUnit = Number(formData.price);
     } else {
@@ -392,7 +420,9 @@ export default function ItemCard({ initialData }: ItemCardProps) {
         ]
       : []),
 
-    ...(isHardwarePlate || isHardwareBasecup ? [hardwareTypeField] : []),
+    ...(isHardwarePlate || isHardwareBasecup || isHardwareStopper
+      ? [hardwareTypeField]
+      : []),
 
     {
       label: "Item Size",
@@ -428,6 +458,16 @@ export default function ItemCard({ initialData }: ItemCardProps) {
         ? DarazSizeOptions
         : isHardwareRod
         ? RodSizeOptions
+        : isHardwareStopper
+        ? formData.pipeType === "Round"
+          ? [...RoundItemSizeOptions, ...AdditionalRoundItemSizeOptions]
+          : formData.pipeType === "Square"
+          ? [...SquareItemSizeOptions, ...AdditionalSquareItemSizeOptions]
+          : []
+        : isHardwareRing
+        ? [...RingSize]
+        : isHardwareStar
+        ? [...StarSize]
         : formData.pipeType === "Round"
         ? RoundItemSizeOptions
         : SquareItemSizeOptions,
@@ -443,6 +483,17 @@ export default function ItemCard({ initialData }: ItemCardProps) {
             value: formData.color,
             type: "select",
             options: CuttBallColorOptions,
+            onChange: (value: string) =>
+              setFormData((prev) => ({ ...prev, color: value })),
+          },
+        ]
+      : isHardwareRing || isHardwareStar
+      ? [
+          {
+            label: "Color",
+            value: formData.color,
+            type: "select",
+            options: RingColorOptions,
             onChange: (value: string) =>
               setFormData((prev) => ({ ...prev, color: value })),
           },
@@ -500,7 +551,10 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     isHardwareDraz ||
     isPillars ||
     isHardwareGote ||
-    isHardwareBasecup
+    isHardwareBasecup ||
+    isHardwareStopper ||
+    isHardwareRing ||
+    isHardwareStar
       ? [
           {
             label: "Price Per Unit (PKR)",
