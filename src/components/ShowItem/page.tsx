@@ -54,7 +54,7 @@ const ShowItem = () => {
   return (
     <div className="flex flex-col gap-2 max-h-[600px] h-full w-full overflow-y-auto bg-cardBg rounded-lg py-[30px] px-[20px]">
       {/* Header */}
-      <div className="flex items-center justify-between h-[70px] w-full bg-BgColor px-[50px]">
+      <div className="flex items-center justify-between h-[70px] w-full bg-BgColor px-[50px] py-[20px]">
         <p className="text-white text-xs w-[100px]">Item Name</p>
         <p className="text-white text-xs w-[120px]">Quantity</p>
         <p className="text-white text-xs w-[80px] text-center">Weight</p>

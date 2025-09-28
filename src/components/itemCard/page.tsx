@@ -22,6 +22,7 @@ const BandSizeOptions = [
 
 const RingSize = [`2"`, `3"`];
 const StarSize = [`2"`, `3"`, `4"`];
+const ChutkniSize = [`4"`, `6"`, `8"`];
 
 const CuttBallSizeOptions = [
   '1/2"',
@@ -41,7 +42,7 @@ const SquareItemSizeOptions = [
   '1" x 1"',
 ];
 
-const VipBallsSize = [];
+const VipBallsSize = [`3"`, `2 - 1/2"`, `2"`, `1 - 1/2"`, `1"`];
 
 const AdditionalSquareItemSizePillars = [`1" x 1 - 1/2"`, `1" x 2"`];
 
@@ -221,6 +222,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     formData.itemType === "Hardware" && formData.itemName === "Star";
   const isHardwareBalls =
     formData.itemType === "Hardware" && formData.itemName === "VIP Ball";
+  const isHardwareChutkni =
+    formData.itemType === "Hardware" && formData.itemName === "Chutkni";
 
   // ================= Handle submit =====================
 
@@ -248,6 +251,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       formData.itemType === "Hardware" && formData.itemName === "Ring";
     const isHardwareBalls =
       formData.itemType === "Hardware" && formData.itemName === "VIP Ball";
+    const isHardwareChutkni =
+      formData.itemType === "Hardware" && formData.itemName === "Chutkni";
 
     // ✅ Validation
     if (
@@ -302,7 +307,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       isHardwareStopper ||
       isHardwareRing ||
       isHardwareStar ||
-      isHardwareBalls
+      isHardwareBalls ||
+      isHardwareChutkni
     ) {
       newItem.pricePerUnit = Number(formData.price);
     } else {
@@ -468,6 +474,10 @@ export default function ItemCard({ initialData }: ItemCardProps) {
         ? [...RingSize]
         : isHardwareStar
         ? [...StarSize]
+        : isHardwareBalls
+        ? [...VipBallsSize]
+        : isHardwareChutkni
+        ? [...ChutkniSize]
         : formData.pipeType === "Round"
         ? RoundItemSizeOptions
         : SquareItemSizeOptions,
@@ -554,7 +564,9 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     isHardwareBasecup ||
     isHardwareStopper ||
     isHardwareRing ||
-    isHardwareStar
+    isHardwareStar ||
+    isHardwareBalls ||
+    isHardwareChutkni
       ? [
           {
             label: "Price Per Unit (PKR)",

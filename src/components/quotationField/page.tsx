@@ -28,6 +28,7 @@ interface InventoryItem {
   guage?: string | number;
   gote?: string;
   pipeType?: string;
+  color?: string;
 }
 
 const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
@@ -105,39 +106,202 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   const grandTotal = total - discount;
   const balance = grandTotal - received;
 
-  const calculateRow = (selected: InventoryItem, qty: number) => {
-    let weight = 0;
-    let rate = 0;
-    let amount = 0;
-    let guage = "";
+  // const calculateRow = (selected: InventoryItem, qty: number) => {
+  //   let weight = 0;
+  //   let rate = 0;
+  //   let amount = 0;
+  //   let guage = "";
 
-    if (!selected || !selected.name) {
-      return { weight, rate, amount, guage };
-    }
+  //   if (!selected || !selected.name) {
+  //     return { weight, rate, amount, guage };
+  //   }
 
-    if (
-      selected.type?.toLowerCase() === "hardware" &&
-      (selected.name?.toLowerCase() === "band" ||
-        selected.name?.toLowerCase() === "cutt ball" ||
-        selected.name?.toLowerCase() === "draz")
-    ) {
-      rate = Math.round(selected.pricePerUnit ?? 0);
-      amount = qty * rate;
-    } else {
-      const singlePieceWeight =
-        selected.quantity > 0 ? (selected.weight ?? 0) / selected.quantity : 0;
-      const sellingPricePerKg = selected.pricePerKg ?? 0;
-      const unitPrice = Math.round(singlePieceWeight * sellingPricePerKg);
-      weight = qty * singlePieceWeight;
-      rate = unitPrice;
-      amount = qty * rate;
-    }
+  //   if (
+  //     selected.type?.toLowerCase() === "hardware" &&
+  //     (selected.name?.toLowerCase() === "band" ||
+  //       selected.name?.toLowerCase() === "cutt ball" ||
+  //       selected.name?.toLowerCase() === "draz")
+  //   ) {
+  //     rate = Math.round(selected.pricePerUnit ?? 0);
+  //     amount = qty * rate;
+  //   } else {
+  //     const singlePieceWeight =
+  //       selected.quantity > 0 ? (selected.weight ?? 0) / selected.quantity : 0;
+  //     const sellingPricePerKg = selected.pricePerKg ?? 0;
+  //     const unitPrice = Math.round(singlePieceWeight * sellingPricePerKg);
+  //     weight = qty * singlePieceWeight;
+  //     rate = unitPrice;
+  //     amount = qty * rate;
+  //   }
 
-    guage = selected.guage !== undefined ? selected.guage.toString() : "";
-    return { weight, rate, amount, guage };
-  };
+  //   guage = selected.guage !== undefined ? selected.guage.toString() : "";
+  //   return { weight, rate, amount, guage };
+  // };
 
   // =================== HandleChange ===================
+
+  // const handleChange = (
+  //   index: number,
+  //   field: keyof QuotationRow,
+  //   value: any
+  // ) => {
+  //   const newRows = [...rows];
+  //   let numValue = Number(value);
+  //   if (isNaN(numValue) || numValue < 0) numValue = 0;
+
+  //   if (field === "item") {
+  //     // Match inventory (case-insensitive)
+  //     const selected = inventoryItems.find(
+  //       (inv) => inv.name.toLowerCase() === value.toLowerCase()
+  //     );
+
+  //     if (selected) {
+  //       // Build display name
+  //       let displayItem = selected.name;
+  //       if (selected.type.toLowerCase() === "hardware") {
+  //         displayItem += selected.size ? ` ${selected.size}` : "";
+  //         if (
+  //           selected.gote &&
+  //           selected.gote.trim() !== "" &&
+  //           selected.gote.toLowerCase() !== "without gote"
+  //         ) {
+  //           displayItem += ` - G ${selected.gote}`;
+  //         }
+  //       } else if (selected.type.toLowerCase().includes("pillar")) {
+  //         displayItem =
+  //           selected.pipeType?.toLowerCase() === "fancy"
+  //             ? "Pillar Fancy"
+  //             : `Pillar${selected.size ? " " + selected.size : ""}${
+  //                 selected.gote &&
+  //                 selected.gote.trim() !== "" &&
+  //                 selected.gote.toLowerCase() !== "without gote"
+  //                   ? ` - G ${selected.gote}`
+  //                   : ""
+  //               }`;
+  //       } else {
+  //         displayItem = selected.size
+  //           ? `${selected.type} ${selected.size}`
+  //           : selected.type;
+  //         if (
+  //           selected.gote &&
+  //           selected.gote.trim() !== "" &&
+  //           selected.gote.toLowerCase() !== "without gote"
+  //         ) {
+  //           displayItem += ` - G ${selected.gote}`;
+  //         }
+  //       }
+
+  //       const qty = newRows[index].qty || 1;
+
+  //       // ✅ Use ratePerUnit from rateList
+  //       const rateFromList =
+  //         rateList[selected.name.toLowerCase()]?.ratePerUnit ??
+  //         selected.pricePerUnit ??
+  //         0;
+
+  //       // Calculate weight and amount
+  //       let weight = 0;
+  //       let amount = 0;
+  //       if (
+  //         selected.type.toLowerCase() === "hardware" ||
+  //         selected.type.toLowerCase().includes("pillar")
+  //       ) {
+  //         amount = qty * rateFromList;
+  //       } else {
+  //         const singleWeight = selected.quantity
+  //           ? (selected.weight ?? 0) / selected.quantity
+  //           : 0;
+  //         weight = singleWeight * qty;
+  //         amount = rateFromList * qty;
+  //       }
+
+  //       newRows[index] = {
+  //         ...newRows[index],
+  //         item: displayItem,
+  //         originalName: selected.name,
+  //         size: selected.size?.toString() || "",
+  //         qty,
+  //         weight,
+  //         rate: rateFromList,
+  //         amount,
+  //         guage: selected.guage?.toString() || "",
+  //         gote: selected.gote?.toString() || "",
+  //       };
+  //     } else {
+  //       // Free-text fallback
+  //       newRows[index] = {
+  //         ...newRows[index],
+  //         item: value,
+  //         originalName: value,
+  //         size: "",
+  //         qty: 0,
+  //         weight: 0,
+  //         rate: 0,
+  //         amount: 0,
+  //         guage: "",
+  //         gote: "",
+  //       };
+  //     }
+  //   } else if (field === "qty") {
+  //     const selected = inventoryItems.find(
+  //       (inv) =>
+  //         inv.name.toLowerCase() ===
+  //           newRows[index].originalName?.toLowerCase() &&
+  //         inv.size?.toString() === newRows[index].size?.toString()
+  //     );
+
+  //     if (selected) {
+  //       if (numValue > selected.quantity) {
+  //         numValue = selected.quantity;
+  //         alert(`Only ${selected.quantity} units available in stock!`);
+  //       }
+
+  //       const rateFromList =
+  //         rateList[selected.name.toLowerCase()]?.ratePerUnit ??
+  //         selected.pricePerUnit ??
+  //         0;
+
+  //       let weight = 0;
+  //       let amount = 0;
+  //       if (
+  //         selected.type.toLowerCase() === "hardware" ||
+  //         selected.type.toLowerCase().includes("pillar")
+  //       ) {
+  //         amount = numValue * rateFromList;
+  //       } else {
+  //         const singleWeight = selected.quantity
+  //           ? (selected.weight ?? 0) / selected.quantity
+  //           : 0;
+  //         weight = singleWeight * numValue;
+  //         amount = rateFromList * numValue;
+  //       }
+
+  //       newRows[index] = {
+  //         ...newRows[index],
+  //         qty: numValue,
+  //         weight,
+  //         rate: rateFromList,
+  //         amount,
+  //         guage: selected.guage?.toString() || "",
+  //         gote: selected.gote?.toString() || "",
+  //       };
+  //     } else {
+  //       newRows[index].qty = numValue;
+  //     }
+  //   } else if (field === "rate") {
+  //     numValue = Math.round(numValue);
+  //     newRows[index] = { ...newRows[index], rate: numValue };
+  //     const qty = Number(newRows[index].qty) || 0;
+  //     newRows[index].amount = qty * numValue;
+  //   } else {
+  //     newRows[index] = { ...newRows[index], [field]: numValue };
+  //     const qty = Number(newRows[index].qty) || 0;
+  //     const rate = Number(newRows[index].rate) || 0;
+  //     newRows[index].amount = qty * rate;
+  //   }
+
+  //   setRows(newRows);
+  // };
 
   const handleChange = (
     index: number,
@@ -149,56 +313,38 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     if (isNaN(numValue) || numValue < 0) numValue = 0;
 
     if (field === "item") {
-      // Match inventory (case-insensitive)
       const selected = inventoryItems.find(
         (inv) => inv.name.toLowerCase() === value.toLowerCase()
       );
 
       if (selected) {
-        // Build display name
-        let displayItem = selected.name;
-        if (selected.type.toLowerCase() === "hardware") {
-          displayItem += selected.size ? ` ${selected.size}` : "";
-          if (
+        let displayItem = "";
+        if (selected.type.toLowerCase().includes("pillar")) {
+          displayItem = `${selected.type} ${
+            selected.size ? selected.size : ""
+          } ${
             selected.gote &&
             selected.gote.trim() !== "" &&
             selected.gote.toLowerCase() !== "without gote"
-          ) {
-            displayItem += ` - G ${selected.gote}`;
-          }
-        } else if (selected.type.toLowerCase().includes("pillar")) {
-          displayItem =
-            selected.pipeType?.toLowerCase() === "fancy"
-              ? "Pillar Fancy"
-              : `Pillar${selected.size ? " " + selected.size : ""}${
-                  selected.gote &&
-                  selected.gote.trim() !== "" &&
-                  selected.gote.toLowerCase() !== "without gote"
-                    ? ` - G ${selected.gote}`
-                    : ""
-                }`;
+              ? selected.gote
+              : ""
+          } - ${selected.guage || ""}`.trim();
+        } else if (selected.type.toLowerCase() === "hardware") {
+          displayItem = `${selected.name}${selected.size ? selected.size : ""}${
+            selected.color && selected.color.trim() !== "" ? selected.color : ""
+          }`;
         } else {
-          displayItem = selected.size
-            ? `${selected.type} ${selected.size}`
-            : selected.type;
-          if (
-            selected.gote &&
-            selected.gote.trim() !== "" &&
-            selected.gote.toLowerCase() !== "without gote"
-          ) {
-            displayItem += ` - G ${selected.gote}`;
-          }
+          displayItem = `${selected.type} ${
+            selected.size ? selected.size : ""
+          } - ${selected.guage || ""}`.trim();
         }
 
         const qty = newRows[index].qty || 1;
-
-        // ✅ Use ratePerUnit from rateList
         const rateFromList =
           rateList[selected.name.toLowerCase()]?.ratePerUnit ??
           selected.pricePerUnit ??
           0;
 
-        // Calculate weight and amount
         let weight = 0;
         let amount = 0;
         if (
@@ -227,7 +373,6 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
           gote: selected.gote?.toString() || "",
         };
       } else {
-        // Free-text fallback
         newRows[index] = {
           ...newRows[index],
           item: value,
@@ -242,6 +387,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         };
       }
     } else if (field === "qty") {
+      // Existing qty logic remains unchanged
       const selected = inventoryItems.find(
         (inv) =>
           inv.name.toLowerCase() ===
@@ -456,34 +602,130 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                     }
                   />
                 </td>
-                <td className="border border-white p-2 w-[180px]">
+                {/* <td className="border border-white p-2 w-[180px]">
                   <input
                     type="text"
                     value={row.item || ""}
                     onChange={(e) => {
                       const inputValue = e.target.value;
-
-                      // Try to match inventory items by name
                       const matchedItem = inventoryItems.find(
                         (inv) =>
                           inv.name.toLowerCase() === inputValue.toLowerCase()
                       );
-
                       if (matchedItem) {
                         handleChange(i, "item", matchedItem.name);
                       } else {
                         handleChange(i, "item", inputValue);
                       }
                     }}
+                    onFocus={(e) => {
+                      e.target.value = "";
+                      setRows([...rows]);
+                    }}
                     className="bg-transparent text-center w-full outline-none"
                     list="inventory-options"
+                    autoComplete="on"
                   />
                   <datalist id="inventory-options">
                     {inventoryItems
                       .filter((inv) => inv.quantity > 0)
-                      .map((inv, idx) => (
-                        <option key={idx} value={inv.name} />
-                      ))}
+                      .map((inv, idx) => {
+                        let displayValue = "";
+                        if (inv.type.toLowerCase().includes("pillar")) {
+                          displayValue = `${inv.type} ${
+                            inv.size ? inv.size : ""
+                          } ${
+                            inv.gote &&
+                            inv.gote.trim() !== "" &&
+                            inv.gote.toLowerCase() !== "without gote"
+                              ? inv.gote
+                              : ""
+                          } - ${inv.guage || ""}`.trim();
+                        } else if (inv.type.toLowerCase() === "hardware") {
+                          displayValue = `${inv.name}${
+                            inv.size ? inv.size : ""
+                          }${
+                            inv.color && inv.color.trim() !== ""
+                              ? inv.color
+                              : ""
+                          }`;
+                        } else {
+                          displayValue = `${inv.type} ${
+                            inv.size ? inv.size : ""
+                          } - ${inv.guage || ""}`.trim();
+                        }
+                        return (
+                          <option
+                            key={idx}
+                            value={inv.name}
+                            label={displayValue}
+                          />
+                        );
+                      })}
+                  </datalist>
+                </td> */}
+
+                <td className="border border-white p-2 w-[180px]">
+                  <input
+                    type="text"
+                    value={row.item || ""}
+                    onChange={(e) => {
+                      const inputValue = e.target.value;
+                      const matchedItem = inventoryItems.find(
+                        (inv) =>
+                          inv.name.toLowerCase() === inputValue.toLowerCase()
+                      );
+                      if (matchedItem) {
+                        handleChange(i, "item", matchedItem.name);
+                      } else {
+                        handleChange(i, "item", inputValue);
+                      }
+                    }}
+                    onFocus={(e) => {
+                      e.target.value = "";
+                      setRows([...rows]);
+                    }}
+                    className="bg-transparent text-center w-full outline-none"
+                    list="inventory-options"
+                    autoComplete="on"
+                  />
+                  <datalist id="inventory-options">
+                    {inventoryItems
+                      .filter((inv) => inv.quantity > 0)
+                      .slice(0, 10) // Limit to 10 items (adjust as needed)
+                      .map((inv, idx) => {
+                        let displayValue = "";
+                        if (inv.type.toLowerCase().includes("pillar")) {
+                          displayValue = `${inv.type} ${
+                            inv.size ? inv.size : ""
+                          } ${
+                            inv.gote &&
+                            inv.gote.trim() !== "" &&
+                            inv.gote.toLowerCase() !== "without gote"
+                              ? inv.gote
+                              : ""
+                          } - ${inv.guage || ""}`.trim();
+                        } else if (inv.type.toLowerCase() === "hardware") {
+                          displayValue = `${inv.name}${
+                            inv.size ? inv.size : ""
+                          }${
+                            inv.color && inv.color.trim() !== ""
+                              ? inv.color
+                              : ""
+                          }`;
+                        } else {
+                          displayValue = `${inv.type} ${
+                            inv.size ? inv.size : ""
+                          } - ${inv.guage || ""}`.trim();
+                        }
+                        return (
+                          <option
+                            key={idx}
+                            value={inv.name}
+                            label={displayValue}
+                          />
+                        );
+                      })}
                   </datalist>
                 </td>
 
