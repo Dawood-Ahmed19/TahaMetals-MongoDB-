@@ -163,14 +163,17 @@ export async function GET(req: Request) {
     const status = searchParams.get("status");
     const search = searchParams.get("search");
 
+    const month = searchParams.get("month");
+    const year = searchParams.get("year");
+    const fromDate = searchParams.get("fromDate");
+    const toDate = searchParams.get("toDate");
+
     const client = await clientPromise;
     const db = client.db("TahaMetals");
     const quotationsCol = db.collection<Quotation>("quotations");
 
-    // 1️⃣ Build query for DB
     let query: any = {};
 
-    // Only apply to DB if it's a real status ("active", "returned", etc.)
     if (status && !["All", "Paid", "Unpaid"].includes(status)) {
       query.status = status;
     }
@@ -179,20 +182,33 @@ export async function GET(req: Request) {
       query.quotationId = { $regex: search, $options: "i" };
     }
 
-    // 2️⃣ Fetch docs
+    if (month && year) {
+      const start = new Date(Number(year), Number(month) - 1, 1);
+      const end = new Date(Number(year), Number(month), 0, 23, 59, 59);
+      query.date = { $gte: start.toISOString(), $lte: end.toISOString() };
+    } else if (year) {
+      const start = new Date(Number(year), 0, 1);
+      const end = new Date(Number(year), 11, 31, 23, 59, 59);
+      query.date = { $gte: start.toISOString(), $lte: end.toISOString() };
+    } else if (fromDate && toDate) {
+      query.date = {
+        $gte: new Date(fromDate).toISOString(),
+        $lte: new Date(toDate).toISOString(),
+      };
+    }
+
     const rawDocs = await quotationsCol
       .find(query)
       .sort({ date: -1 })
       .toArray();
     const count = await quotationsCol.countDocuments(query);
 
-    // 3️⃣ Enrich docs with payments + balance + profit
-    let quotations: Quotation[] = rawDocs.map((q) => {
+    let quotations: Quotation[] = rawDocs.map((q: any) => {
       const payments: Payment[] = Array.isArray(q.payments) ? q.payments : [];
       const totalReceived = payments.reduce((s, p) => s + p.amount, 0);
       const balance = q.grandTotal
         ? q.grandTotal - totalReceived
-        : q.amount - totalReceived;
+        : (q.amount || 0) - totalReceived;
 
       const quotationTotalProfit =
         q.quotationTotalProfit ??
@@ -211,7 +227,6 @@ export async function GET(req: Request) {
       };
     });
 
-    // 4️⃣ Apply Paid / Unpaid AFTER calculation
     if (status === "Paid") {
       quotations = quotations.filter(
         (q) => q.balance !== undefined && q.balance <= 0
@@ -224,7 +239,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ success: true, quotations, count });
   } catch (err) {
-    console.error("Error fetching quotations:", err);
+    console.error("❌ Error fetching quotations:", err);
     return NextResponse.json(
       { success: false, quotations: [], count: 0 },
       { status: 500 }
