@@ -144,11 +144,9 @@ export const generateInvoicePDF = async (quotationId: string) => {
 
     let yPos = finalY;
 
-    // 1️⃣ TOTAL
     doc.text(`TOTAL: ${quotation.total.toLocaleString()}`, rightXTotal, yPos);
     yPos += 16;
 
-    // 2️⃣ DISCOUNT
     doc.text(
       `DISCOUNT: ${quotation.discount.toLocaleString()}`,
       rightXTotal,
@@ -156,11 +154,9 @@ export const generateInvoicePDF = async (quotationId: string) => {
     );
     yPos += 16;
 
-    // 3️⃣ BALANCE
     doc.text(`BALANCE: ${balance.toLocaleString()}`, rightXTotal, yPos);
     yPos += 16;
 
-    // 4️⃣ LOADING (if present)
     if (
       quotation.hasOwnProperty("loading") &&
       quotation.loading !== undefined &&
@@ -174,7 +170,6 @@ export const generateInvoicePDF = async (quotationId: string) => {
       yPos += 16;
     }
 
-    // 5️⃣ GRAND TOTAL (always last)
     doc.text(
       `GRAND TOTAL: ${quotation.grandTotal.toLocaleString()}`,
       rightXTotal,
