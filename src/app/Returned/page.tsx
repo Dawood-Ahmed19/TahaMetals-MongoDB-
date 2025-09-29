@@ -9,6 +9,13 @@ interface InvoiceItem {
   amount: number;
   totalProfit: number;
   weight: number;
+  guage?: string;
+  size?: string;
+  gote?: string;
+  type?: string;
+  name?: string;
+  color?: string;
+  pipeType?: string;
 }
 
 interface Invoice {
@@ -23,29 +30,59 @@ const ReturnItems = () => {
   const [qty, setQty] = useState<number>(1);
   const [message, setMessage] = useState("");
 
-  // 🔎 Fetch invoice details
-  const fetchInvoice = async () => {
-    if (!invoiceId) {
-      setMessage("Please enter an Invoice ID.");
-      return;
+  // DisplayName Generator
+  const getDisplayName = (item: InvoiceItem): string => {
+    if (!item) return "";
+
+    const type = item.type?.toLowerCase() || "";
+
+    if (type === "hardware") {
+      return `${item.name || ""}${item.size ? " " + item.size : ""}${
+        item.color && item.color.trim() !== "" ? " " + item.color : ""
+      }`;
     }
+
+    if (type.includes("pillar")) {
+      return `${item.type || "Pillar"}${item.size ? " " + item.size : ""}${
+        item.guage ? " " + item.guage : ""
+      }${item.gote && item.gote.trim() !== "" ? " - " + item.gote : ""}`;
+    }
+
+    if (type === "pipe") {
+      return `${item.type || "Pipe"}${item.size ? " " + item.size : ""}`;
+    }
+
+    return `${item.type || ""}${item.size ? " " + item.size : ""}`.trim();
+  };
+
+  const fetchInvoice = async () => {
+    if (!invoiceId) return;
 
     try {
       const res = await fetch(`/api/quotations?search=${invoiceId}`);
       const data = await res.json();
+
       if (data.success && data.quotations.length > 0) {
-        setInvoice(data.quotations[0]);
-        setMessage("");
-      } else {
-        setMessage("Invoice not found.");
-        setInvoice(null);
+        // enrich with inventory info
+        const invRes = await fetch("/api/inventory");
+        const invData = await invRes.json();
+
+        const inventory = invData.items || [];
+
+        const enrichedItems = data.quotations[0].items.map((it: any) => {
+          const invMatch = inventory.find(
+            (inv: any) => inv.name === it.originalName
+          );
+          return invMatch ? { ...it, ...invMatch } : it;
+        });
+
+        setInvoice({ ...data.quotations[0], items: enrichedItems });
       }
     } catch (err) {
       setMessage("Error fetching invoice.");
     }
   };
 
-  // 🛠 Process return
   const handleReturn = async () => {
     if (!invoiceId || !selectedItem || !qty) {
       setMessage("Please select an invoice, item and quantity.");
@@ -62,7 +99,44 @@ const ReturnItems = () => {
       console.log("⚡ API Response:", data);
 
       if (data.success) {
-        setMessage("✅ Return processed successfully.");
+        setInvoice((prev) => {
+          if (!prev) return prev;
+
+          const updatedItems = prev.items
+            .map((it) => {
+              if (it.originalName === selectedItem) {
+                if (qty >= it.qty) {
+                  return null;
+                } else {
+                  return {
+                    ...it,
+                    qty: it.qty - qty,
+                    amount: it.amount - (it.amount / it.qty) * qty,
+                    totalProfit:
+                      it.totalProfit - (it.totalProfit / it.qty) * qty,
+                    weight: it.weight - (it.weight / it.qty) * qty,
+                  };
+                }
+              }
+              return it;
+            })
+            .filter(Boolean) as InvoiceItem[];
+
+          return {
+            ...prev,
+            items: updatedItems,
+          };
+        });
+
+        let timer: NodeJS.Timeout;
+        if (data.success) {
+          setMessage("✅ Return processed successfully.");
+
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => setMessage(""), 1500);
+          setSelectedItem("");
+          setQty(1);
+        }
       } else {
         setMessage("❌ Error: " + data.message);
       }
@@ -96,6 +170,8 @@ const ReturnItems = () => {
       {invoice && (
         <div className="w-full max-w-md bg-gray-800 rounded p-4">
           <h2 className="font-bold mb-2">Invoice: {invoice.quotationId}</h2>
+
+          {/* 🔽 Dropdown - now using readable item names */}
           <select
             value={selectedItem}
             onChange={(e) => setSelectedItem(e.target.value)}
@@ -104,7 +180,7 @@ const ReturnItems = () => {
             <option value="">Select item to return</option>
             {invoice.items.map((it) => (
               <option key={it.originalName} value={it.originalName}>
-                {it.item} (Qty: {it.qty})
+                {getDisplayName(it)} (Qty: {it.qty})
               </option>
             ))}
           </select>
