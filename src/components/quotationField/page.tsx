@@ -346,7 +346,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         id="invoice-section"
         className="flex justify-center items-start w-full max-w-[600px] bg-gray-900 overflow-auto text-xs"
       >
-        <table className="text-white table-auto border-collapse border border-gray-600 w-full min-h-[600px] overflow-y-auto">
+        <table className="text-white table-auto border-collapse border border-gray-600 w-full overflow-y-auto">
           <thead>
             <tr className="bg-gray-800 text-center h-[40px]">
               <th className="border border-white p-2 w-[60px]">Qty</th>
