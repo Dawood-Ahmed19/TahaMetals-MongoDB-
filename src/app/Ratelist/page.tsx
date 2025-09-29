@@ -22,6 +22,7 @@ interface ItemRow {
   rate?: string;
   ratePerUnit?: string;
   size?: string | number;
+  color?: string;
 }
 
 const Ratelist = () => {
@@ -34,47 +35,34 @@ const Ratelist = () => {
   // Helper: generate frontend display name
   const getDisplayName = (item: ItemRow) => {
     if (!item) return "";
-    let displayItem = item.name ?? "";
 
-    if (item.type?.toLowerCase() === "hardware") {
-      displayItem += item.size ? ` ${item.size}` : "";
-      if (
-        item.gote &&
-        item.gote.toString().trim() !== "" &&
-        item.gote.toString().toLowerCase() !== "without gote"
-      ) {
-        displayItem += ` - G ${item.gote}`;
-      }
-    } else if (item.type?.toLowerCase().includes("pillar")) {
-      displayItem =
-        item.pipeType?.toLowerCase() === "fancy"
-          ? "Pillar Fancy"
-          : `Pillar${item.size ? " " + item.size : ""}${
-              item.gote &&
-              item.gote.toString().trim() !== "" &&
-              item.gote.toString().toLowerCase() !== "without gote"
-                ? ` - G ${item.gote}`
-                : ""
-            }`;
-    } else {
-      displayItem = item.size
-        ? `${item.type} ${item.size}`
-        : item.type ?? item.name;
-      if (
-        item.gote &&
-        item.gote.toString().trim() !== "" &&
-        item.gote.toString().toLowerCase() !== "without gote"
-      ) {
-        displayItem += ` - G ${item.gote}`;
-      }
+    const type = item.type?.toLowerCase() || "";
+
+    if (type === "hardware") {
+      return `${item.name || ""}${item.size ? " " + item.size : ""}${
+        item.color && item.color.trim() !== "" ? " " + item.color : ""
+      }`.trim();
     }
 
-    return displayItem;
+    if (type.includes("pillar")) {
+      return `${item.type || "Pillar"}${item.size ? " " + item.size : ""}${
+        item.guage ? " " + item.guage : ""
+      }${
+        item.gote && item.gote.toString().trim() !== "" ? " " + item.gote : ""
+      }`.trim();
+    }
+
+    if (type === "pipe") {
+      return `${item.type || "Pipe"}${item.size ? " " + item.size : ""}${
+        item.guage ? " " + item.guage : ""
+      }`.trim();
+    }
+
+    return `${item.type || ""}${item.size ? " " + item.size : ""}`.trim();
   };
 
   const fetchInventory = async (search = "") => {
     try {
-      // ✅ pass search to backend
       const query = search.trim()
         ? `?search=${encodeURIComponent(search)}`
         : "";
@@ -88,7 +76,7 @@ const Ratelist = () => {
 
       const inventoryItems = inventoryData.items;
 
-      // ✅ fetch saved rates for matching items
+      // Fetch saved rates
       const ratesRes = await fetch("/api/ratelist");
       const ratesData = await ratesRes.json();
       const savedRates: Record<string, any> = {};
@@ -101,28 +89,60 @@ const Ratelist = () => {
         });
       }
 
+      // Build merged rows with necessary fields
       const mergedRows = inventoryItems.map((item: any) => ({
         _id: item._id,
         name: item.name ?? "N/A",
         type: item.type ?? "",
         pipeType: item.pipeType ?? "",
         size: item.size ?? "",
-        guage: item.guage ?? "N/A",
-        gote: item.gote ?? "N/A",
+        guage: item.guage ?? "",
+        gote: item.gote ?? "",
+        color: item.color ?? "", // ✅ include color
         weight: item.weight ?? 0,
         quantity: item.quantity ?? 1,
         rate: savedRates[item._id]?.rate ?? "",
         ratePerUnit: savedRates[item._id]?.ratePerUnit ?? "",
       }));
 
+      // 👇 Inline getDisplayName consistent with naming rules
+      const getDisplayName = (item: any): string => {
+        if (!item) return "";
+
+        const type = item.type?.toLowerCase() || "";
+
+        if (type === "hardware") {
+          return `${item.name || ""}${item.size ? " " + item.size : ""}${
+            item.color && item.color.trim() !== "" ? " " + item.color : ""
+          }`;
+        }
+
+        if (type.includes("pillar")) {
+          return `${item.type || "Pillar"}${item.size ? " " + item.size : ""}${
+            item.guage ? " " + item.guage : ""
+          }${
+            item.gote && item.gote.toString().trim() !== ""
+              ? " " + item.gote
+              : ""
+          }`;
+        }
+
+        if (type === "pipe") {
+          return `${item.type || "Pipe"}${item.size ? " " + item.size : ""}${
+            item.guage ? " " + item.guage : ""
+          }`;
+        }
+
+        return `${item.type || ""}${item.size ? " " + item.size : ""}`.trim();
+      };
+
+      // Filter by search using displayName
       const finalRows =
         search.trim() === ""
           ? mergedRows
           : mergedRows.filter((row) =>
               getDisplayName(row).toLowerCase().includes(search.toLowerCase())
             );
-
-      setRows(finalRows);
 
       setRows(finalRows);
     } catch (err) {
