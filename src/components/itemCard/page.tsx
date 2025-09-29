@@ -107,6 +107,7 @@ const HardwareItemNameOptions = [
   "Stopper",
   "Star",
   "Chutkni",
+  "Rawal Bolt CC 13mm",
 ];
 
 const PlateSizeRoundOptions = [
@@ -249,6 +250,9 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     formData.itemType === "Hardware" && formData.itemName === "VIP Ball";
   const isHardwareChutkni =
     formData.itemType === "Hardware" && formData.itemName === "Chutkni";
+  const isHardwareBolt =
+    formData.itemType === "Hardware" &&
+    formData.itemName === "Rawal Bolt CC 13mm";
 
   // ================= Handle submit =====================
 
@@ -278,6 +282,9 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       formData.itemType === "Hardware" && formData.itemName === "VIP Ball";
     const isHardwareChutkni =
       formData.itemType === "Hardware" && formData.itemName === "Chutkni";
+    const isHardwareBolt =
+      formData.itemType === "Hardware" &&
+      formData.itemName === "Rawal Bolt CC 13mm";
 
     // ✅ Validation
     if (
@@ -288,7 +295,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       ((isHardwarePlate || isHardwareBasecup || isHardwareStopper) &&
         !formData.pipeType) ||
       // itemSize is required unless: Pillars + Fancy
-      (formData.itemType === "Pillars" && formData.pipeType === "Fancy"
+      ((formData.itemType === "Pillars" && formData.pipeType === "Fancy") ||
+      isHardwareBolt
         ? false
         : !formData.itemSize) ||
       !formData.stock ||
@@ -333,7 +341,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       isHardwareRing ||
       isHardwareStar ||
       isHardwareBalls ||
-      isHardwareChutkni
+      isHardwareChutkni ||
+      isHardwareBolt
     ) {
       newItem.pricePerUnit = Number(formData.price);
     } else {
@@ -426,7 +435,6 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       ? [pipeTypeFieldForPipeAndPillars]
       : []),
 
-    // ✅ Hide Item Name for Pipe & Pillars
     ...(!["Pipe", "Pillars"].includes(formData.itemType)
       ? [
           {
@@ -506,7 +514,9 @@ export default function ItemCard({ initialData }: ItemCardProps) {
         : formData.pipeType === "Round"
         ? RoundItemSizeOptions
         : SquareItemSizeOptions,
-      hidden: formData.itemType === "Pillars" && formData.pipeType === "Fancy",
+      hidden:
+        (formData.itemType === "Pillars" && formData.pipeType === "Fancy") ||
+        isHardwareBolt,
       onChange: (value: string) =>
         setFormData((prev) => ({ ...prev, itemSize: value })),
     },
@@ -591,7 +601,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     isHardwareRing ||
     isHardwareStar ||
     isHardwareBalls ||
-    isHardwareChutkni
+    isHardwareChutkni ||
+    isHardwareBolt
       ? [
           {
             label: "Price Per Unit (PKR)",
