@@ -21,12 +21,14 @@ interface Quotation {
   balance?: number;
   quotationTotalProfit?: number;
   status?: string;
+  loading?: number;
 }
 
 // ✅ Create new quotation
 export async function POST(req: Request) {
   try {
-    const { items, discount, total, grandTotal, payments } = await req.json();
+    const { items, discount, total, grandTotal, payments, loading } =
+      await req.json();
 
     const client = await clientPromise;
     const db = client.db("TahaMetals");
@@ -95,6 +97,7 @@ export async function POST(req: Request) {
       amount: grandTotal,
       date: new Date().toISOString(),
       quotationTotalProfit,
+      loading: Number(loading) || 0,
       status: "active",
     });
 
@@ -139,6 +142,7 @@ export async function POST(req: Request) {
         payments: safePayments,
         amount: grandTotal,
         date: new Date().toISOString(),
+        loading: Number(loading) || 0,
         quotationTotalProfit,
         totalReceived,
         balance,
