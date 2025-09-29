@@ -20,6 +20,31 @@ const BandSizeOptions = [
   '4"',
 ];
 
+const stopperRoundSize = [
+  `1/2" Gol`,
+  `1/2" minar`,
+  `1/2" steel`,
+  `1/2" china`,
+  `5/8"`,
+  `3/4"`,
+  `1 - 1/4"`,
+  `1 - 1/2"`,
+  `2"`,
+];
+
+const stopperSquareSize = [
+  `1/2" x 1/2"`,
+  `1" x 2"`,
+  `1" x 1 - 1/2"`,
+  `3/4" x 1 - 1/2"`,
+  `1/2" x 1 - 1/2"`,
+  `1/2" x 1"`,
+  `2" x 2"`,
+  `1 - 1/2" x 1 - 1/2"`,
+  `1 - 1/4" x 1 - 1/4"`,
+  `1" x 1"`,
+];
+
 const RingSize = [`2"`, `3"`];
 const StarSize = [`2"`, `3"`, `4"`];
 const ChutkniSize = [`4"`, `6"`, `8"`];
@@ -466,9 +491,9 @@ export default function ItemCard({ initialData }: ItemCardProps) {
         ? RodSizeOptions
         : isHardwareStopper
         ? formData.pipeType === "Round"
-          ? [...RoundItemSizeOptions, ...AdditionalRoundItemSizeOptions]
+          ? [...stopperRoundSize]
           : formData.pipeType === "Square"
-          ? [...SquareItemSizeOptions, ...AdditionalSquareItemSizeOptions]
+          ? [...stopperSquareSize]
           : []
         : isHardwareRing
         ? [...RingSize]
