@@ -415,68 +415,6 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                     onChange={(selectedOption) =>
                       handleChange(i, "item", selectedOption?.value ?? "")
                     }
-                    onFocus={() => setRows([...rows])}
-                    className="w-[180px]"
-                    styles={{
-                      menu: (provided) => ({
-                        ...provided,
-                        maxHeight: 400,
-                        overflowY: "auto",
-                        backgroundColor: "#1f2937",
-                        color: "white",
-                      }),
-                      option: (provided, state) => ({
-                        ...provided,
-                        backgroundColor: state.isFocused
-                          ? "#374151"
-                          : "#1f2937",
-                        color: "white",
-                        cursor: "pointer",
-                      }),
-                      control: (provided) => ({
-                        ...provided,
-                        backgroundColor: "transparent",
-                        border: "none",
-                        outline: "none",
-                        width: "100%",
-                        minHeight: "24px",
-                        height: "24px",
-                        padding: 0,
-                        boxShadow: "none",
-                      }),
-                      singleValue: (provided) => ({
-                        ...provided,
-                        color: "white",
-                        textAlign: "center",
-                        margin: 0,
-                        padding: 0,
-                        lineHeight: "24px",
-                      }),
-                      input: (provided) => ({
-                        ...provided,
-                        color: "white",
-                        textAlign: "center",
-                        margin: 0,
-                        padding: 0,
-                        height: "24px",
-                      }),
-                      valueContainer: (provided) => ({
-                        ...provided,
-                        padding: "0 8px",
-                        height: "24px",
-                      }),
-                      indicatorsContainer: (provided) => ({
-                        ...provided,
-                        padding: 0,
-                        height: "24px",
-                      }),
-                      dropdownIndicator: (provided) => ({
-                        ...provided,
-                        padding: "0 4px",
-                        height: "24px",
-                        color: "white",
-                      }),
-                    }}
                     value={
                       row.item
                         ? {
@@ -488,7 +426,64 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                           }
                         : null
                     }
-                    placeholder=""
+                    placeholder="Select item..."
+                    isSearchable
+                    menuPortalTarget={document.body}
+                    className="w-[180px] text-center"
+                    styles={{
+                      menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                      menu: (base) => ({
+                        ...base,
+                        maxHeight: 400,
+                        overflowY: "auto",
+                        backgroundColor: "#1f2937",
+                        color: "white",
+                      }),
+                      option: (base, state) => ({
+                        ...base,
+                        backgroundColor: state.isFocused
+                          ? "#374151"
+                          : "#1f2937",
+                        color: "white",
+                        cursor: "pointer",
+                        textAlign: "center",
+                      }),
+                      control: (base) => ({
+                        ...base,
+                        backgroundColor: "transparent",
+                        border: "none",
+                        outline: "none",
+                        minHeight: "24px",
+                        height: "24px",
+                        boxShadow: "none",
+                        justifyContent: "center",
+                      }),
+                      singleValue: (base) => ({
+                        ...base,
+                        color: "white",
+                        textAlign: "center",
+                        width: "100%",
+                      }),
+                      input: (base) => ({
+                        ...base,
+                        color: "white",
+                        textAlign: "center",
+                      }),
+                      placeholder: (base) => ({
+                        ...base,
+                        color: "#9CA3AF",
+                        textAlign: "center",
+                        width: "100%",
+                      }),
+                      valueContainer: (base) => ({
+                        ...base,
+                        justifyContent: "center",
+                      }),
+                      indicatorsContainer: (base) => ({
+                        ...base,
+                        height: "24px",
+                      }),
+                    }}
                   />
                 </td>
 

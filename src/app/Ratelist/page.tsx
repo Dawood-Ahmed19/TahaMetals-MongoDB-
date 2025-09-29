@@ -101,7 +101,6 @@ const Ratelist = () => {
         });
       }
 
-      // ✅ merge inventory + saved rates
       const mergedRows = inventoryItems.map((item: any) => ({
         _id: item._id,
         name: item.name ?? "N/A",
