@@ -180,7 +180,9 @@ const ShowInvoices = () => {
                   {q.grandTotal.toLocaleString("en-US")} Rs
                 </p>
                 <p className="w-[100px] text-center">
-                  {received > 0 ? (
+                  {isReturned ? (
+                    <span className="text-red-400 font-bold">Returned</span>
+                  ) : received > 0 ? (
                     `${received.toLocaleString("en-US", {
                       minimumFractionDigits: 0,
                       maximumFractionDigits: 2,
@@ -190,7 +192,9 @@ const ShowInvoices = () => {
                   )}
                 </p>
                 <p className="w-[100px] text-center">
-                  {balance > 0 ? (
+                  {isReturned ? (
+                    <span className="text-red-400 font-bold">Returned</span>
+                  ) : balance > 0 ? (
                     `${balance.toLocaleString("en-US", {
                       minimumFractionDigits: 0,
                       maximumFractionDigits: 2,

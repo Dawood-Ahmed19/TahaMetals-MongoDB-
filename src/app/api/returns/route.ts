@@ -1,141 +1,140 @@
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb"; // Import the MongoDB client promise
+import clientPromise from "@/lib/mongodb";
 
 export async function POST(req: Request) {
   try {
-    const { invoiceId } = await req.json();
+    const { invoiceId, itemName, qty } = await req.json();
 
-    if (!invoiceId) {
+    if (!invoiceId || !itemName || !qty) {
       return NextResponse.json(
-        { success: false, message: "Invoice ID is required." },
+        {
+          success: false,
+          message: "Invoice ID, itemName and qty are required.",
+        },
         { status: 400 }
       );
     }
 
     const client = await clientPromise;
-    const db = client.db("TahaMetals"); // Ensure the database name matches
-    const quotationsCollection = db.collection("quotations"); // Explicitly set collection name
+    const db = client.db("TahaMetals");
+    const quotationsCollection = db.collection("quotations");
+    const inventoryCollection = db.collection("inventory");
+    const reportsCollection = db.collection("reportsSummary");
 
-    console.log("Attempting to update invoice:", invoiceId);
-
-    // Debug: Check if any documents match the quotationId
-    const existingDoc = await quotationsCollection.findOne({
+    // 1️⃣ Find the invoice
+    const invoice = await quotationsCollection.findOne({
       quotationId: invoiceId,
     });
-    if (!existingDoc) {
-      console.log("No document found with quotationId:", invoiceId);
+    if (!invoice) {
       return NextResponse.json(
         { success: false, message: "Invoice not found." },
         { status: 404 }
       );
     }
-
-    console.log("Existing document found:", {
-      quotationId: existingDoc.quotationId,
-      status: existingDoc.status,
-    });
-
-    // Check if the invoice is already returned or not active
-    if (existingDoc.status && existingDoc.status !== "active") {
-      console.log(
-        "Status is not 'active':",
-        existingDoc.status,
-        "- Skipping return."
-      );
+    if (invoice.status !== "active") {
       return NextResponse.json(
-        {
-          success: false,
-          message: `Invoice is already ${existingDoc.status}. Cannot process return.`,
-        },
+        { success: false, message: "Invoice is not active." },
         { status: 400 }
       );
     }
 
-    // Prepare the query: match quotationId and status is "active"
-    const query = { quotationId: invoiceId, status: "active" };
-
-    // Debug: Check matching documents
-    const matchingDocs = await quotationsCollection.find(query).toArray();
-    console.log("Matching documents before update:", matchingDocs);
-
-    // Perform the update with upsert: false to avoid creating new documents
-    const invoiceResult = await quotationsCollection.findOneAndUpdate(
-      query,
-      { $set: { status: "returned", updatedAt: new Date().toISOString() } }, // Add updatedAt to force a change
-      { returnDocument: "after", upsert: false } // Return the updated document, no new document creation
+    // 2️⃣ Find the item in invoice
+    const itemIndex = invoice.items.findIndex(
+      (i: any) => i.originalName === itemName
     );
-
-    // Log the full result for debugging
-    console.log("findOneAndUpdate result:", invoiceResult);
-
-    // Check if invoiceResult is null (operation failed)
-    if (!invoiceResult) {
-      console.error("findOneAndUpdate returned null for invoiceId:", invoiceId);
+    if (itemIndex === -1) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Failed to process the return operation. Check server logs.",
-        },
-        { status: 500 }
-      );
-    }
-
-    // Check if the updated document value is null (no matching document or no change)
-    if (!invoiceResult.value) {
-      console.log(
-        "No active invoice found or no change applied for invoiceId:",
-        invoiceId
-      );
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Active invoice not found or already processed.",
-        },
+        { success: false, message: "Item not found in this invoice." },
         { status: 404 }
       );
     }
 
-    const invoice = invoiceResult.value; // Safely assign the non-null value
-    const { grandTotal, quotationTotalProfit, items } = invoice;
-
-    // Extract itemId (assuming it's in the first item of the items array under 'name')
-    const itemId = items?.[0]?.name; // Adjust based on your schema (e.g., items[0].item if different)
-
-    if (!itemId) {
-      console.warn("No itemId found in invoice:", invoice);
+    const item = invoice.items[itemIndex];
+    if (qty > item.qty) {
       return NextResponse.json(
-        { success: false, message: "No itemId found for inventory update." },
+        { success: false, message: "Return qty exceeds sold qty." },
         { status: 400 }
       );
     }
 
-    // Adjust Reports totals (subtract amount and profit from active totals)
-    const reportsCollection = db.collection("reportsSummary");
-    await reportsCollection.updateOne(
-      {},
+    // 3️⃣ Calculate effects of return
+    const refundAmount = item.rate * qty;
+    const refundProfit = item.profitPerUnit * qty;
+    const refundWeight =
+      item.weight && item.qty > 0 ? (item.weight / item.qty) * qty : 0;
+
+    // 4️⃣ Update invoice items
+    let updatedItems = [...invoice.items];
+    if (qty === item.qty) {
+      // remove the whole item
+      updatedItems.splice(itemIndex, 1);
+    } else {
+      updatedItems[itemIndex].qty -= qty;
+      updatedItems[itemIndex].amount -= refundAmount;
+      updatedItems[itemIndex].weight -= refundWeight;
+      updatedItems[itemIndex].totalProfit -= refundProfit;
+    }
+
+    // 5️⃣ Update invoice totals
+    const newGrandTotal = invoice.grandTotal - refundAmount;
+    const newProfit = (invoice.quotationTotalProfit || 0) - refundProfit;
+
+    await quotationsCollection.updateOne(
+      { quotationId: invoiceId },
+      {
+        $set: {
+          items: updatedItems,
+          grandTotal: newGrandTotal,
+          quotationTotalProfit: newProfit,
+          updatedAt: new Date().toISOString(),
+        },
+      }
+    );
+
+    if (updatedItems.length === 0) {
+      await quotationsCollection.updateOne(
+        { quotationId: invoiceId },
+        {
+          $set: {
+            status: "returned",
+            grandTotal: 0,
+            quotationTotalProfit: 0,
+            updatedAt: new Date().toISOString(),
+          },
+        }
+      );
+    }
+
+    // 6️⃣ Restore inventory
+    await inventoryCollection.updateOne(
+      { name: item.originalName },
       {
         $inc: {
-          totalAmount: -grandTotal,
-          totalProfit: -(quotationTotalProfit || 0),
+          quantity: qty,
+          weight: refundWeight,
         },
       },
       { upsert: true }
     );
 
-    // Update inventory (increment itemsInStock based on item name)
-    const inventoryCollection = db.collection("inventory");
-    await inventoryCollection.updateOne(
-      { name: itemId }, // Use name from items array
-      { $inc: { quantity: 1 } }, // Adjust based on your inventory schema
+    // 7️⃣ Adjust reports
+    await reportsCollection.updateOne(
+      {},
+      {
+        $inc: {
+          totalAmount: -refundAmount,
+          totalProfit: -refundProfit,
+        },
+      },
       { upsert: true }
     );
 
     return NextResponse.json(
-      { success: true, message: "Return processed successfully." },
+      { success: true, message: "Item returned successfully." },
       { status: 200 }
     );
   } catch (err) {
-    console.error("Error processing return:", err);
+    console.error("❌ Error processing return:", err);
     return NextResponse.json(
       {
         success: false,
