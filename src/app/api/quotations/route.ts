@@ -126,7 +126,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // 5️⃣ Calculate balance
     const totalReceived = safePayments.reduce((s, p) => s + p.amount, 0);
     const balance = grandTotal - totalReceived;
 

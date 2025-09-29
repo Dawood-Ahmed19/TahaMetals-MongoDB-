@@ -28,6 +28,7 @@ const Ratelist = () => {
   const [rows, setRows] = useState<ItemRow[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const pageSize = 10;
 
   // Helper: generate frontend display name
@@ -71,11 +72,15 @@ const Ratelist = () => {
     return displayItem;
   };
 
-  // Fetch inventory items
-  const fetchInventory = async () => {
+  const fetchInventory = async (search = "") => {
     try {
-      const inventoryRes = await fetch("/api/inventory");
+      // ✅ pass search to backend
+      const query = search.trim()
+        ? `?search=${encodeURIComponent(search)}`
+        : "";
+      const inventoryRes = await fetch(`/api/inventory${query}`);
       const inventoryData = await inventoryRes.json();
+
       if (!inventoryData.success || !Array.isArray(inventoryData.items)) {
         setRows([]);
         return;
@@ -83,7 +88,7 @@ const Ratelist = () => {
 
       const inventoryItems = inventoryData.items;
 
-      // Fetch saved rates
+      // ✅ fetch saved rates for matching items
       const ratesRes = await fetch("/api/ratelist");
       const ratesData = await ratesRes.json();
       const savedRates: Record<string, any> = {};
@@ -96,7 +101,7 @@ const Ratelist = () => {
         });
       }
 
-      // Merge saved rates into inventory items
+      // ✅ merge inventory + saved rates
       const mergedRows = inventoryItems.map((item: any) => ({
         _id: item._id,
         name: item.name ?? "N/A",
@@ -111,12 +116,38 @@ const Ratelist = () => {
         ratePerUnit: savedRates[item._id]?.ratePerUnit ?? "",
       }));
 
-      setRows(mergedRows);
+      const finalRows =
+        search.trim() === ""
+          ? mergedRows
+          : mergedRows.filter((row) =>
+              getDisplayName(row).toLowerCase().includes(search.toLowerCase())
+            );
+
+      setRows(finalRows);
+
+      setRows(finalRows);
     } catch (err) {
       console.error("Failed to fetch inventory:", err);
       setRows([]);
     }
   };
+
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      fetchInventory("");
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      fetchInventory(searchTerm);
+    }, 400);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
 
   useEffect(() => {
     fetchInventory();
@@ -177,6 +208,13 @@ const Ratelist = () => {
     <div className="h-full flex flex-col items-center gap-[50px] px-[75px] py-[35px] 2xl:px-[75px] 2xl:py-[35px] xl-only:px-[40px] xl-only:py-[25px] xl-only:gap-[35px]">
       <span className="flex justify-between w-full">
         <h1 className="text-xl font-bold text-white">Rate List</h1>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search items..."
+          className="px-3 py-2 rounded bg-gray-900 text-white outline-none border border-gray-600 focus:border-green-500 transition w-[250px]"
+        />
         <p className="text-sm text-white">{formattedDate}</p>
       </span>
 

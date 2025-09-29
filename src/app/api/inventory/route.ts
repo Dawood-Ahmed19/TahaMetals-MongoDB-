@@ -158,13 +158,42 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const search = searchParams.get("search") || "";
+
     const client = await clientPromise;
     const db = client.db("TahaMetals");
     const collection = db.collection<InventoryItem>("inventory");
 
-    const items = await collection.find({}).toArray();
+    let filter: any = {};
+
+    if (search && search.trim()) {
+      filter = {
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { type: { $regex: search, $options: "i" } },
+          { size: { $regex: search, $options: "i" } },
+          { gote: { $regex: search, $options: "i" } },
+          { guage: { $regex: search, $options: "i" } },
+
+          {
+            $expr: {
+              $regexMatch: {
+                input: {
+                  $concat: ["$type", " ", "$size", " ", "$gote", " ", "$guage"],
+                },
+                regex: search,
+                options: "i",
+              },
+            },
+          },
+        ],
+      };
+    }
+
+    const items = await collection.find(filter).toArray();
 
     const safeItems = items.map((item) => ({
       ...item,
