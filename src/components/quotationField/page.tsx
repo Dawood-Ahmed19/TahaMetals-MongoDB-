@@ -50,7 +50,6 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   >({});
   const [mounted, setMounted] = useState(false);
 
-  // Load from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {

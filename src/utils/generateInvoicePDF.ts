@@ -74,7 +74,11 @@ export const generateInvoicePDF = async (quotationId: string) => {
       return itemName;
     };
 
-    const doc = new jsPDF({ unit: "pt", format: "a5" });
+    const doc = new jsPDF({
+      unit: "pt",
+      format: "a5",
+      orientation: "landscape",
+    });
     const brandX = 40,
       brandY = 30;
 
