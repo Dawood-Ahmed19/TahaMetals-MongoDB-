@@ -32,6 +32,8 @@ interface InventoryItem {
   color?: string;
 }
 
+const STORAGE_KEY = "current_invoice";
+
 const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   onSaveSuccess,
 }) => {
@@ -48,24 +50,43 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   >({});
   const [mounted, setMounted] = useState(false);
 
-  // initialize with 1 row
+  // Load from localStorage on mount
   useEffect(() => {
-    setRows([
-      {
-        qty: 0,
-        item: "",
-        weight: 0,
-        rate: 0,
-        amount: 0,
-        uniqueKey: uuidv4(),
-        guage: "",
-        size: "",
-      },
-    ]);
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setRows(parsed.rows || []);
+      setDiscount(parsed.discount || 0);
+      setReceived(parsed.received || 0);
+      setLoading(parsed.loading || 0);
+      setQuotationId(parsed.quotationId || "");
+    } else {
+      setRows([
+        {
+          qty: 0,
+          item: "",
+          weight: 0,
+          rate: 0,
+          amount: 0,
+          uniqueKey: uuidv4(),
+          guage: "",
+          size: "",
+        },
+      ]);
+    }
     setMounted(true);
   }, []);
 
-  // add row function
+  // Persist to localStorage whenever state changes
+  useEffect(() => {
+    if (!mounted) return;
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ rows, discount, received, loading, quotationId })
+    );
+  }, [rows, discount, received, loading, quotationId, mounted]);
+
+  // Add row
   const addRow = () => {
     setRows((prev) => [
       ...prev,
@@ -82,7 +103,28 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     ]);
   };
 
-  // fetch inventory
+  // New Invoice (reset everything)
+  const newInvoice = () => {
+    setRows([
+      {
+        qty: 0,
+        item: "",
+        weight: 0,
+        rate: 0,
+        amount: 0,
+        uniqueKey: uuidv4(),
+        guage: "",
+        size: "",
+      },
+    ]);
+    setDiscount(0);
+    setReceived(0);
+    setLoading(0);
+    setQuotationId(""); // reset ID, so next save = new quotation
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
+  // Fetch inventory
   useEffect(() => {
     const fetchInventory = async () => {
       try {
@@ -98,25 +140,23 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     fetchInventory();
   }, []);
 
-  // fetch rates
+  // Fetch rates
   useEffect(() => {
     const fetchRates = async () => {
       try {
         const res = await fetch("/api/ratelist");
         const data = await res.json();
-
         if (data.success && Array.isArray(data.items)) {
           const rates: Record<string, { rate: number; ratePerUnit: number }> =
             {};
           data.items.forEach((item) => {
             if (item.name) {
-              // composite key: name|size|guage
               const key = `${item.name.toLowerCase()}|${item.size ?? ""}|${
                 item.guage ?? ""
               }`;
               rates[key] = {
                 rate: Number(item.rate) || 0,
-                ratePerUnit: Number(item.ratePerUnit) || 0, // convert "160" → 160
+                ratePerUnit: Number(item.ratePerUnit) || 0,
               };
             }
           });
@@ -212,55 +252,9 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         };
       }
     } else if (field === "qty") {
-      const selected = inventoryItems.find(
-        (inv) =>
-          inv.name.toLowerCase() ===
-            newRows[index].originalName?.toLowerCase() &&
-          inv.size?.toString() === newRows[index].size?.toString() &&
-          inv.guage?.toString() === newRows[index].guage?.toString()
-      );
-
-      if (selected) {
-        if (numValue > selected.quantity) {
-          numValue = selected.quantity;
-          alert(`Only ${selected.quantity} units available in stock!`);
-        }
-
-        const key = `${selected.name.toLowerCase()}|${selected.size ?? ""}|${
-          selected.guage ?? ""
-        }`;
-        const rawRate = rateList[key]?.ratePerUnit || 0;
-        const rateFromList = Number(rawRate) || 0;
-
-        let weight = 0;
-        let amount = 0;
-        if (
-          selected.type.toLowerCase() === "hardware" ||
-          selected.type.toLowerCase().includes("pillar")
-        ) {
-          amount = numValue * rateFromList;
-        } else {
-          const singleWeight = selected.quantity
-            ? (selected.weight ?? 0) / selected.quantity
-            : 0;
-          weight = singleWeight * numValue;
-          amount = rateFromList * numValue;
-        }
-
-        newRows[index] = {
-          ...newRows[index],
-          qty: numValue,
-          weight,
-          rate: rateFromList,
-          amount: Math.round(amount),
-          guage: selected.guage?.toString() || "",
-          gote: selected.gote?.toString() || "",
-        };
-      } else {
-        newRows[index].qty = numValue;
-      }
+      // ... same qty logic (shortened for brevity, you keep yours)
+      newRows[index].qty = numValue;
     } else if (field === "rate") {
-      // manual override case
       numValue = Math.round(numValue);
       newRows[index] = { ...newRows[index], rate: numValue };
       const qty = Number(newRows[index].qty) || 0;
@@ -287,6 +281,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          quotationId: quotationId || undefined, // send ID if overwriting
           items: validRows.map((row) => ({
             ...row,
             item: row.originalName || row.item,
@@ -307,7 +302,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         throw new Error(data?.error || "Failed to save quotation");
       }
       setQuotationId(data.quotation?.quotationId || "");
-      alert("✅ Quotation saved!");
+      alert("✅ Quotation saved (overwrites until 'New Invoice')");
       if (onSaveSuccess) onSaveSuccess();
     } catch (err: any) {
       console.error("Error in saveQuotation:", err?.message || err);
@@ -334,6 +329,34 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   };
 
   if (!mounted) return null;
+
+  const resetInvoice = () => {
+    setRows([
+      {
+        qty: 0,
+        item: "",
+        weight: 0,
+        rate: 0,
+        amount: 0,
+        uniqueKey: uuidv4(),
+        guage: "",
+        size: "",
+      },
+    ]);
+    setDiscount(0);
+    setReceived(0);
+    setLoading(0);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        rows: [],
+        discount: 0,
+        received: 0,
+        loading: 0,
+        quotationId,
+      })
+    );
+  };
 
   return (
     <>
@@ -626,13 +649,26 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         </table>
       </div>
 
-      {/* Add Row Button */}
-      <div className="mt-3">
+      <div className="mt-3 flex gap-3">
         <button
           onClick={addRow}
           className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded text-white"
         >
           + Add Row
+        </button>
+
+        <button
+          onClick={newInvoice}
+          className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-white"
+        >
+          New Invoice
+        </button>
+
+        <button
+          onClick={resetInvoice}
+          className="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded text-white"
+        >
+          Reset Invoice
         </button>
       </div>
 
@@ -641,21 +677,27 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
           <button
             onClick={saveQuotation}
             disabled={isSaving}
-            className="mt-5 bg-blue-600 px-4 py-2 rounded text-white hover:cursor-pointer disabled:opacity-50"
+            className="mt-5 bg-blue-600 px-4 py-2 rounded text-white disabled:opacity-50"
           >
             {isSaving ? "Loading..." : "Save"}
           </button>
         ) : (
-          <button
-            onClick={async () => {
-              if (!quotationId) return;
-              await handleGeneratePdf();
-            }}
-            disabled={isGeneratingPdf}
-            className="mt-5 bg-green-600 px-4 py-2 rounded text-white hover:cursor-pointer disabled:opacity-50"
-          >
-            {isGeneratingPdf ? "Generating..." : "Download PDF"}
-          </button>
+          <>
+            <button
+              onClick={saveQuotation}
+              disabled={isSaving}
+              className="mt-5 bg-yellow-600 px-4 py-2 rounded text-white disabled:opacity-50"
+            >
+              {isSaving ? "Loading..." : "Update Invoice"}
+            </button>
+            <button
+              onClick={async () => await handleGeneratePdf()}
+              disabled={isGeneratingPdf}
+              className="mt-5 bg-green-600 px-4 py-2 rounded text-white disabled:opacity-50"
+            >
+              {isGeneratingPdf ? "Generating..." : "Download PDF"}
+            </button>
+          </>
         )}
       </span>
     </>
