@@ -66,21 +66,18 @@ export const generateInvoicePDF = async (quotationId: string) => {
             invItem.color && invItem.color.trim() !== "" ? invItem.color : ""
           }`.trim();
         } else {
-          // Assuming "pipe" as a common item type falling under general items
           return `${invItem.type}${invItem.size ? invItem.size : ""}${
             invItem.guage || ""
           }`.trim();
         }
       }
-      return itemName; // fallback if not found
+      return itemName;
     };
 
-    // --- PDF setup ---
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const doc = new jsPDF({ unit: "pt", format: "a5" });
     const brandX = 40,
       brandY = 30;
 
-    // Branding
     doc
       .setFontSize(18)
       .setFont("helvetica", "bold")
