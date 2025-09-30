@@ -23,6 +23,13 @@ interface ItemRow {
   ratePerUnit?: string;
   size?: string | number;
   color?: string;
+
+  pricePerKg?: number;
+  pricePerUnit?: number;
+
+  // inline error fields
+  errorRate?: string;
+  errorUnit?: string;
 }
 
 const Ratelist = () => {
@@ -34,28 +41,24 @@ const Ratelist = () => {
 
   const getDisplayName = (item: ItemRow) => {
     if (!item) return "";
-
     const type = item.type?.toLowerCase() || "";
 
     if (type === "hardware") {
-      return `${item.name || ""} ${item.size ? " " + item.size : ""}${
+      return `${item.name || ""}${item.size ? " " + item.size : ""}${
         item.color && item.color.trim() !== "" ? " " + item.color : ""
       }`.trim();
     }
-
     if (type.includes("pillar")) {
       return `${item.type || "Pillar"} ${
         item.size ? " " + item.size : ""
       }`.trim();
     }
-
     if (type === "pipe") {
       return `${item.type || "Pipe"} ${
-        item.size ? " " + item.size : " "
+        item.size ? " " + item.size : ""
       }`.trim();
     }
-
-    return `${item.type || ""} " " ${item.size ? " " + item.size : ""}`.trim();
+    return `${item.type || ""} ${item.size ?? ""}`.trim();
   };
 
   const fetchInventory = async (search = "") => {
@@ -74,7 +77,6 @@ const Ratelist = () => {
 
       const inventoryItems = inventoryData.items;
 
-      // ✅ Fetch saved rates
       const ratesRes = await fetch("/api/ratelist");
       const ratesData = await ratesRes.json();
       const savedRates: Record<string, any> = {};
@@ -91,12 +93,10 @@ const Ratelist = () => {
         });
       }
 
-      // ✅ Merge inventory items with rates based on composite key
       const mergedRows = inventoryItems.map((item: any) => {
         const key = `${item.name.toLowerCase()}|${item.size ?? ""}|${
           item.guage ?? ""
         }`;
-
         return {
           _id: item._id,
           name: item.name ?? "N/A",
@@ -108,11 +108,19 @@ const Ratelist = () => {
           color: item.color ?? "",
           weight: item.weight ?? 0,
           quantity: item.quantity ?? 1,
+
+          // only show values from ratelist (start empty unless saved)
           rate: savedRates[key]?.rate ?? "",
           ratePerUnit: savedRates[key]?.ratePerUnit ?? "",
+
+          // inventory base values (for validation)
+          pricePerKg: item.pricePerKg ?? 0,
+          pricePerUnit: item.pricePerUnit ?? 0,
+
+          errorRate: "",
+          errorUnit: "",
         };
       });
-
       setRows(mergedRows);
     } catch (err) {
       console.error("Failed to fetch inventory:", err);
@@ -137,31 +145,14 @@ const Ratelist = () => {
     fetchInventory();
   }, []);
 
-  useEffect(() => {
-    fetchInventory();
-  }, []);
-
-  const handleRateChange = (index: number, value: string) => {
-    const newRows = [...rows];
-    newRows[index].rate = value;
-
-    if (
-      newRows[index].weight &&
-      newRows[index].quantity &&
-      newRows[index].quantity > 0
-    ) {
-      const numericRate = parseFloat(value);
-      if (!isNaN(numericRate)) {
-        const weightPerUnit = newRows[index].weight / newRows[index].quantity;
-        newRows[index].ratePerUnit = (numericRate * weightPerUnit).toFixed(2);
-      } else {
-        newRows[index].ratePerUnit = "";
-      }
-    }
-    setRows(newRows);
-  };
-
   const saveRows = async () => {
+    // prevent save if there are errors
+    const hasErrors = rows.some((row) => row.errorRate || row.errorUnit);
+    if (hasErrors) {
+      alert("⚠️ Please fix errors before saving.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const res = await fetch("/api/ratelist", {
@@ -174,11 +165,11 @@ const Ratelist = () => {
         alert("Rate list saved successfully ✅");
         fetchInventory();
       } else {
-        alert("Failed to save rate list ❌");
+        alert("Failed to save ❌");
       }
     } catch (err) {
       console.error(err);
-      alert("Error saving rate list ❌");
+      alert("Error saving ❌");
     } finally {
       setIsSaving(false);
     }
@@ -188,8 +179,10 @@ const Ratelist = () => {
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedRows = rows.slice(startIndex, startIndex + pageSize);
 
+  const hasErrors = rows.some((row) => row.errorRate || row.errorUnit);
+
   return (
-    <div className="h-full flex flex-col items-center gap-[50px] px-[75px] py-[35px] 2xl:px-[75px] 2xl:py-[35px] xl-only:px-[40px] xl-only:py-[25px] xl-only:gap-[35px]">
+    <div className="h-full flex flex-col items-center gap-[50px] px-[75px] py-[35px]">
       <span className="flex justify-between w-full">
         <h1 className="text-xl font-bold text-white">Rate List</h1>
         <input
@@ -202,7 +195,6 @@ const Ratelist = () => {
         <p className="text-sm text-white">{formattedDate}</p>
       </span>
 
-      {/* Table */}
       <div className="w-full overflow-x-auto">
         <table className="w-full text-white border-collapse min-w-[700px]">
           <thead>
@@ -212,7 +204,7 @@ const Ratelist = () => {
               <th className="border border-gray-600 p-3">Guage</th>
               <th className="border border-gray-600 p-3">Gote</th>
               <th className="border border-gray-600 p-3">Weight per Unit</th>
-              <th className="border border-gray-600 p-3">Rate Per kg</th>
+              <th className="border border-gray-600 p-3">Rate Per Kg</th>
               <th className="border border-gray-600 p-3">Rate per Unit</th>
             </tr>
           </thead>
@@ -244,26 +236,63 @@ const Ratelist = () => {
                     <td className="border border-gray-700 p-2">
                       {weightPerUnit}
                     </td>
+
+                    {/* Rate Per Kg */}
                     <td className="border border-gray-700 p-2">
                       <input
                         type="text"
                         value={row.rate ?? ""}
-                        readOnly={!row.weight || row.weight === 0}
+                        readOnly={!(row.weight && row.weight > 0)}
                         onChange={(e) => {
                           if (row.weight && row.weight > 0) {
-                            handleRateChange(
-                              startIndex + index,
-                              e.target.value
-                            );
+                            const value = e.target.value;
+                            const newRows = [...rows];
+                            newRows[startIndex + index].rate = value;
+
+                            // Validate
+                            newRows[startIndex + index].errorRate = "";
+                            if (value !== "") {
+                              const numericRate = parseFloat(value);
+                              if (
+                                !isNaN(numericRate) &&
+                                numericRate < (row.pricePerKg || 0)
+                              ) {
+                                newRows[
+                                  startIndex + index
+                                ].errorRate = `Must be ≥ ${row.pricePerKg}`;
+                              } else if (
+                                newRows[startIndex + index].quantity &&
+                                newRows[startIndex + index].weight &&
+                                !isNaN(numericRate)
+                              ) {
+                                const wpu =
+                                  newRows[startIndex + index].weight! /
+                                  newRows[startIndex + index].quantity!;
+                                newRows[startIndex + index].ratePerUnit = (
+                                  numericRate * wpu
+                                ).toFixed(2);
+                              }
+                            }
+
+                            setRows(newRows);
                           }
                         }}
                         className={`w-full px-2 py-1 rounded outline-none ${
+                          row.errorRate ? "border border-red-500" : ""
+                        } ${
                           row.weight && row.weight > 0
                             ? "bg-gray-900 text-white"
                             : "bg-gray-800 text-gray-400 cursor-not-allowed"
                         }`}
                       />
+                      {row.errorRate && (
+                        <div className="text-red-500 text-xs">
+                          {row.errorRate}
+                        </div>
+                      )}
                     </td>
+
+                    {/* Rate Per Unit */}
                     <td className="border border-gray-700 p-2">
                       <input
                         type="text"
@@ -271,18 +300,40 @@ const Ratelist = () => {
                         readOnly={!!(row.weight && row.weight > 0)}
                         onChange={(e) => {
                           if (!row.weight || row.weight === 0) {
+                            const value = e.target.value;
                             const newRows = [...rows];
-                            newRows[startIndex + index].ratePerUnit =
-                              e.target.value;
+                            newRows[startIndex + index].ratePerUnit = value;
+                            newRows[startIndex + index].errorUnit = "";
+
+                            // Validate
+                            if (value !== "") {
+                              const numericRate = parseFloat(value);
+                              if (
+                                !isNaN(numericRate) &&
+                                numericRate < (row.pricePerUnit || 0)
+                              ) {
+                                newRows[
+                                  startIndex + index
+                                ].errorUnit = `Must be ≥ ${row.pricePerUnit}`;
+                              }
+                            }
+
                             setRows(newRows);
                           }
                         }}
                         className={`w-full px-2 py-1 rounded outline-none ${
+                          row.errorUnit ? "border border-red-500" : ""
+                        } ${
                           row.weight && row.weight > 0
                             ? "bg-gray-800 text-white"
                             : "bg-gray-900 text-white"
                         }`}
                       />
+                      {row.errorUnit && (
+                        <div className="text-red-500 text-xs">
+                          {row.errorUnit}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
@@ -307,11 +358,9 @@ const Ratelist = () => {
         >
           Previous
         </button>
-
         <span className="text-gray-300">
           Page {currentPage} of {totalPages}
         </span>
-
         <button
           onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
           disabled={currentPage === totalPages}
@@ -325,10 +374,14 @@ const Ratelist = () => {
       <div className="flex justify-end w-full max-w-[700px] mt-4">
         <button
           onClick={saveRows}
-          disabled={isSaving}
-          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition disabled:opacity-50"
+          disabled={isSaving || hasErrors}
+          className={`px-4 py-2 rounded transition ${
+            isSaving || hasErrors
+              ? "bg-gray-500 cursor-not-allowed text-gray-200"
+              : "bg-green-600 hover:bg-green-700 text-white"
+          }`}
         >
-          {isSaving ? "Saving..." : "Save"}
+          {isSaving ? "Saving..." : hasErrors ? "Fix Errors First" : "Save"}
         </button>
       </div>
     </div>
