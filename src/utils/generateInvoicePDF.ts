@@ -54,7 +54,7 @@ export const generateInvoicePDF = async (quotationId: string) => {
       const invItem = inventoryItems.find((inv: any) => inv.name === itemName);
       if (invItem) {
         if (invItem.type.toLowerCase().includes("pillar")) {
-          return `${invItem.type}${invItem.size ? invItem.size : ""}${
+          return `${invItem.type} ${invItem.size ? invItem.size : ""}${
             invItem.gote &&
             invItem.gote.trim() !== "" &&
             invItem.gote.toLowerCase() !== "without gote"
@@ -62,7 +62,7 @@ export const generateInvoicePDF = async (quotationId: string) => {
               : ""
           } - ${invItem.guage || ""}`.trim();
         } else if (invItem.type.toLowerCase() === "hardware") {
-          return `${invItem.name}${invItem.size ? invItem.size : ""}${
+          return `${invItem.name} ${invItem.size ? invItem.size : ""}${
             invItem.color && invItem.color.trim() !== "" ? invItem.color : ""
           }`.trim();
         } else {
@@ -77,7 +77,6 @@ export const generateInvoicePDF = async (quotationId: string) => {
     const doc = new jsPDF({
       unit: "pt",
       format: "a5",
-      orientation: "landscape",
     });
     const brandX = 40,
       brandY = 30;
