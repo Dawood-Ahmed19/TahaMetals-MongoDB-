@@ -25,10 +25,18 @@ interface Quotation {
 }
 
 // ✅ Create new quotation
+
 export async function POST(req: Request) {
   try {
-    const { items, discount, total, grandTotal, payments, loading } =
-      await req.json();
+    const {
+      items,
+      discount,
+      total,
+      grandTotal,
+      payments,
+      loading,
+      quotationId,
+    } = await req.json();
 
     const client = await clientPromise;
     const db = client.db("TahaMetals");
@@ -74,21 +82,67 @@ export async function POST(req: Request) {
       });
     }
 
-    // ✅ Calculate total profit of this quotation
     const quotationTotalProfit = enrichedItems.reduce(
       (sum, i) => sum + (i.totalProfit || 0),
       0
     );
 
-    // 2️⃣ Generate quotation ID
-    const count = await quotationsCol.countDocuments({});
-    const quotationId = `INV-${String(count + 1).padStart(4, "0")}`;
-
     const safePayments: Payment[] = Array.isArray(payments) ? payments : [];
+    const totalReceived = safePayments.reduce((s, p) => s + p.amount, 0);
+    const balance = grandTotal - totalReceived;
 
-    // 3️⃣ Insert enriched quotation with default status: "active"
+    // ✅ If quotationId exists, update instead of insert
+    if (quotationId) {
+      const existing = await quotationsCol.findOne({ quotationId });
+
+      if (existing) {
+        await quotationsCol.updateOne(
+          { quotationId },
+          {
+            $set: {
+              items: enrichedItems,
+              discount,
+              total,
+              grandTotal,
+              payments: safePayments,
+              amount: grandTotal,
+              date: new Date().toISOString(),
+              quotationTotalProfit,
+              loading: Number(loading) || 0,
+              totalReceived,
+              balance,
+              status: "active",
+            },
+          }
+        );
+
+        return NextResponse.json({
+          success: true,
+          quotation: {
+            ...existing,
+            items: enrichedItems,
+            discount,
+            total,
+            grandTotal,
+            payments: safePayments,
+            amount: grandTotal,
+            date: new Date().toISOString(),
+            loading: Number(loading) || 0,
+            quotationTotalProfit,
+            totalReceived,
+            balance,
+            status: "active",
+          },
+        });
+      }
+    }
+
+    // 2️⃣ If no quotationId, create new
+    const count = await quotationsCol.countDocuments({});
+    const newQuotationId = `INV-${String(count + 1).padStart(4, "0")}`;
+
     const result = await quotationsCol.insertOne({
-      quotationId,
+      quotationId: newQuotationId,
       items: enrichedItems,
       discount,
       total,
@@ -101,39 +155,11 @@ export async function POST(req: Request) {
       status: "active",
     });
 
-    // 4️⃣ Deduct stock
-    for (const soldItem of items) {
-      const { item, qty, weight } = soldItem;
-
-      const inventoryItem = await inventoryCol.findOne({ name: item });
-      if (inventoryItem) {
-        const currentQty = Number(inventoryItem.quantity) || 0;
-        const currentWeight = Number(inventoryItem.weight) || 0;
-
-        const newQty = Math.max(currentQty - Number(qty), 0);
-        const newWeight = Math.max(currentWeight - Number(weight), 0);
-
-        await inventoryCol.updateOne(
-          { _id: inventoryItem._id },
-          {
-            $set: {
-              quantity: newQty,
-              weight: newWeight,
-              date: new Date().toISOString(),
-            },
-          }
-        );
-      }
-    }
-
-    const totalReceived = safePayments.reduce((s, p) => s + p.amount, 0);
-    const balance = grandTotal - totalReceived;
-
     return NextResponse.json({
       success: true,
       quotation: {
         _id: result.insertedId,
-        quotationId,
+        quotationId: newQuotationId,
         items: enrichedItems,
         discount,
         total,

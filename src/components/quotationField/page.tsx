@@ -49,6 +49,21 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     Record<string, { rate: number; ratePerUnit: number }>
   >({});
   const [mounted, setMounted] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const messageTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const showMessage = (text: string, duration = 1500) => {
+    setMessage(text);
+
+    if (messageTimeoutRef.current) {
+      clearTimeout(messageTimeoutRef.current);
+    }
+
+    messageTimeoutRef.current = setTimeout(() => {
+      setMessage(null);
+      messageTimeoutRef.current = null;
+    }, duration);
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -270,17 +285,84 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
 
   const saveQuotation = async () => {
     const validRows = rows.filter((r) => r.item && r.qty && r.rate);
-    if (validRows.length === 0) {
-      alert("Please add at least one item before saving.");
+    console.log("💡 saveQuotation called", { validRows, quotationId, rows });
+
+    // 🟢 CASE 1: has an ID but no valid rows => auto delete
+    if (quotationId && validRows.length === 0) {
+      try {
+        console.log("🗑️ Auto-deleting empty invoice:", quotationId);
+        const response = await fetch(`/api/quotations/${quotationId}`, {
+          method: "DELETE",
+        });
+
+        const text = await response.text();
+        console.log("🔎 DELETE response text:", text);
+
+        let data: any = {};
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error("Server did not return JSON: " + text);
+        }
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Failed to delete invoice");
+        }
+
+        // ✅ Show deletion message for 1.5s
+        showMessage("🗑️ Invoice deleted successfully!", 1500);
+
+        // 🔥 Reset whole form to NEW invoice mode
+        setQuotationId("");
+        setRows([
+          {
+            qty: 0,
+            item: "",
+            weight: 0,
+            rate: 0,
+            amount: 0,
+            uniqueKey: uuidv4(),
+            guage: "",
+            size: "",
+          },
+        ]);
+        setDiscount(0);
+        setReceived(0);
+        setLoading(0);
+        localStorage.removeItem(STORAGE_KEY);
+
+        if (onSaveSuccess) onSaveSuccess();
+      } catch (err: any) {
+        console.error("❌ Error deleting invoice:", err);
+        setMessage("❌ Error deleting invoice: " + (err?.message || err));
+        setTimeout(() => setMessage(null), 3000);
+      }
       return;
     }
+
+    // 🟢 CASE 2: brand new (no ID) but still empty → stop immediately
+    if (!quotationId && validRows.length === 0) {
+      console.warn("⚠️ Attempted save with no rows and no invoice ID.");
+      setMessage("⚠️ Please add at least one item before saving.");
+      setTimeout(() => setMessage(null), 2000);
+      return;
+    }
+
+    // 🟢 CASE 3: normal save/update
     try {
+      console.log("💾 Saving invoice", {
+        quotationId,
+        validRows,
+        discount,
+        grandTotal,
+      });
       setIsSaving(true);
+
       const response = await fetch("/api/quotations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          quotationId: quotationId || undefined, // send ID if overwriting
+          quotationId: quotationId || undefined,
           items: validRows.map((row) => ({
             ...row,
             item: row.originalName || row.item,
@@ -296,16 +378,25 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         }),
       });
 
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data?.error || "Failed to save quotation");
+      const text = await response.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("Save response not JSON: " + text);
       }
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to save invoice");
+      }
+
       setQuotationId(data.quotation?.quotationId || "");
-      alert("✅ Quotation saved (overwrites until 'New Invoice')");
+      showMessage("✅ Invoice saved successfully!", 1500);
+
       if (onSaveSuccess) onSaveSuccess();
     } catch (err: any) {
-      console.error("Error in saveQuotation:", err?.message || err);
-      alert("❌ Error saving quotation: " + (err?.message || err));
+      console.error("❌ Error saving invoice:", err);
+      showMessage("❌ Error saving invoice", 3000);
     } finally {
       setIsSaving(false);
     }
@@ -670,6 +761,20 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
           Reset Invoice
         </button>
       </div>
+
+      {message && (
+        <div
+          className={`mt-3 px-4 py-2 rounded text-center ${
+            message.startsWith("✅")
+              ? "bg-green-600 text-white"
+              : message.startsWith("🗑️")
+              ? "bg-red-600 text-white"
+              : "bg-red-600 text-white"
+          }`}
+        >
+          {message}
+        </div>
+      )}
 
       <span className="no-print flex items-center gap-4">
         {!quotationId ? (
