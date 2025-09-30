@@ -32,33 +32,30 @@ const Ratelist = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const pageSize = 10;
 
-  // Helper: generate frontend display name
   const getDisplayName = (item: ItemRow) => {
     if (!item) return "";
 
     const type = item.type?.toLowerCase() || "";
 
     if (type === "hardware") {
-      return `${item.name || ""}${item.size ? " " + item.size : ""}${
+      return `${item.name || ""} ${item.size ? " " + item.size : ""}${
         item.color && item.color.trim() !== "" ? " " + item.color : ""
       }`.trim();
     }
 
     if (type.includes("pillar")) {
-      return `${item.type || "Pillar"}${item.size ? " " + item.size : ""}${
-        item.guage ? " " + item.guage : ""
-      }${
-        item.gote && item.gote.toString().trim() !== "" ? " " + item.gote : ""
+      return `${item.type || "Pillar"} ${
+        item.size ? " " + item.size : ""
       }`.trim();
     }
 
     if (type === "pipe") {
-      return `${item.type || "Pipe"}${item.size ? " " + item.size : ""}${
-        item.guage ? " " + item.guage : ""
+      return `${item.type || "Pipe"} ${
+        item.size ? " " + item.size : " "
       }`.trim();
     }
 
-    return `${item.type || ""}${item.size ? " " + item.size : ""}`.trim();
+    return `${item.type || ""} " " ${item.size ? " " + item.size : ""}`.trim();
   };
 
   const fetchInventory = async (search = "") => {
@@ -66,6 +63,7 @@ const Ratelist = () => {
       const query = search.trim()
         ? `?search=${encodeURIComponent(search)}`
         : "";
+
       const inventoryRes = await fetch(`/api/inventory${query}`);
       const inventoryData = await inventoryRes.json();
 
@@ -76,75 +74,46 @@ const Ratelist = () => {
 
       const inventoryItems = inventoryData.items;
 
-      // Fetch saved rates
+      // ✅ Fetch saved rates
       const ratesRes = await fetch("/api/ratelist");
       const ratesData = await ratesRes.json();
       const savedRates: Record<string, any> = {};
+
       if (ratesData.success && Array.isArray(ratesData.items)) {
         ratesData.items.forEach((item: any) => {
-          savedRates[item._id] = {
+          const key = `${item.name.toLowerCase()}|${item.size ?? ""}|${
+            item.guage ?? ""
+          }`;
+          savedRates[key] = {
             rate: item.rate ?? "",
             ratePerUnit: item.ratePerUnit ?? "",
           };
         });
       }
 
-      // Build merged rows with necessary fields
-      const mergedRows = inventoryItems.map((item: any) => ({
-        _id: item._id,
-        name: item.name ?? "N/A",
-        type: item.type ?? "",
-        pipeType: item.pipeType ?? "",
-        size: item.size ?? "",
-        guage: item.guage ?? "",
-        gote: item.gote ?? "",
-        color: item.color ?? "", // ✅ include color
-        weight: item.weight ?? 0,
-        quantity: item.quantity ?? 1,
-        rate: savedRates[item._id]?.rate ?? "",
-        ratePerUnit: savedRates[item._id]?.ratePerUnit ?? "",
-      }));
+      // ✅ Merge inventory items with rates based on composite key
+      const mergedRows = inventoryItems.map((item: any) => {
+        const key = `${item.name.toLowerCase()}|${item.size ?? ""}|${
+          item.guage ?? ""
+        }`;
 
-      // 👇 Inline getDisplayName consistent with naming rules
-      const getDisplayName = (item: any): string => {
-        if (!item) return "";
+        return {
+          _id: item._id,
+          name: item.name ?? "N/A",
+          type: item.type ?? "",
+          pipeType: item.pipeType ?? "",
+          size: item.size ?? "",
+          guage: item.guage ?? "",
+          gote: item.gote ?? "",
+          color: item.color ?? "",
+          weight: item.weight ?? 0,
+          quantity: item.quantity ?? 1,
+          rate: savedRates[key]?.rate ?? "",
+          ratePerUnit: savedRates[key]?.ratePerUnit ?? "",
+        };
+      });
 
-        const type = item.type?.toLowerCase() || "";
-
-        if (type === "hardware") {
-          return `${item.name || ""}${item.size ? " " + item.size : ""}${
-            item.color && item.color.trim() !== "" ? " " + item.color : ""
-          }`;
-        }
-
-        if (type.includes("pillar")) {
-          return `${item.type || "Pillar"}${item.size ? " " + item.size : ""}${
-            item.guage ? " " + item.guage : ""
-          }${
-            item.gote && item.gote.toString().trim() !== ""
-              ? " " + item.gote
-              : ""
-          }`;
-        }
-
-        if (type === "pipe") {
-          return `${item.type || "Pipe"}${item.size ? " " + item.size : ""}${
-            item.guage ? " " + item.guage : ""
-          }`;
-        }
-
-        return `${item.type || ""}${item.size ? " " + item.size : ""}`.trim();
-      };
-
-      // Filter by search using displayName
-      const finalRows =
-        search.trim() === ""
-          ? mergedRows
-          : mergedRows.filter((row) =>
-              getDisplayName(row).toLowerCase().includes(search.toLowerCase())
-            );
-
-      setRows(finalRows);
+      setRows(mergedRows);
     } catch (err) {
       console.error("Failed to fetch inventory:", err);
       setRows([]);
@@ -176,24 +145,19 @@ const Ratelist = () => {
     const newRows = [...rows];
     newRows[index].rate = value;
 
-    const weightPerUnit =
+    if (
       newRows[index].weight &&
       newRows[index].quantity &&
       newRows[index].quantity > 0
-        ? newRows[index].weight / newRows[index].quantity
-        : null;
-
-    if (weightPerUnit && value) {
+    ) {
       const numericRate = parseFloat(value);
       if (!isNaN(numericRate)) {
+        const weightPerUnit = newRows[index].weight / newRows[index].quantity;
         newRows[index].ratePerUnit = (numericRate * weightPerUnit).toFixed(2);
       } else {
         newRows[index].ratePerUnit = "";
       }
-    } else {
-      newRows[index].ratePerUnit = "";
     }
-
     setRows(newRows);
   };
 
@@ -208,6 +172,7 @@ const Ratelist = () => {
       const data = await res.json();
       if (data.success) {
         alert("Rate list saved successfully ✅");
+        fetchInventory();
       } else {
         alert("Failed to save rate list ❌");
       }
@@ -282,18 +247,28 @@ const Ratelist = () => {
                     <td className="border border-gray-700 p-2">
                       <input
                         type="text"
-                        value={row.rate}
-                        onChange={(e) =>
-                          handleRateChange(startIndex + index, e.target.value)
-                        }
-                        className="w-full bg-gray-900 text-white px-2 py-1 rounded outline-none"
+                        value={row.rate ?? ""}
+                        readOnly={!row.weight || row.weight === 0}
+                        onChange={(e) => {
+                          if (row.weight && row.weight > 0) {
+                            handleRateChange(
+                              startIndex + index,
+                              e.target.value
+                            );
+                          }
+                        }}
+                        className={`w-full px-2 py-1 rounded outline-none ${
+                          row.weight && row.weight > 0
+                            ? "bg-gray-900 text-white"
+                            : "bg-gray-800 text-gray-400 cursor-not-allowed"
+                        }`}
                       />
                     </td>
                     <td className="border border-gray-700 p-2">
                       <input
                         type="text"
                         value={row.ratePerUnit ?? ""}
-                        readOnly={row.weight && row.weight > 0}
+                        readOnly={!!(row.weight && row.weight > 0)}
                         onChange={(e) => {
                           if (!row.weight || row.weight === 0) {
                             const newRows = [...rows];

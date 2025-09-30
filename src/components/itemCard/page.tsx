@@ -301,7 +301,6 @@ export default function ItemCard({ initialData }: ItemCardProps) {
         : !formData.itemSize) ||
       !formData.stock ||
       !formData.price ||
-      // gote required for Pillars unless Fancy, else guage required for Pipe
       (isPillars
         ? formData.pipeType === "Fancy"
           ? false
@@ -329,7 +328,6 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       newItem.name = formData.itemName?.trim();
     }
 
-    // ✅ Pricing rules
     if (
       isHardwareBand ||
       isHardwareCuttBall ||

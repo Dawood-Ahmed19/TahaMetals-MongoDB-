@@ -21,7 +21,6 @@ export async function POST(req: Request) {
     const inventoryCollection = db.collection("inventory");
     const reportsCollection = db.collection("reportsSummary");
 
-    // 1️⃣ Find the invoice
     const invoice = await quotationsCollection.findOne({
       quotationId: invoiceId,
     });

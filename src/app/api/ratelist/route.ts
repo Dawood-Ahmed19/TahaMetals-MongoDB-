@@ -18,10 +18,16 @@ export async function POST(req: NextRequest) {
 
     const bulkOps = rows.map((row: any) => ({
       updateOne: {
-        filter: { _id: new ObjectId(row._id) },
+        filter: {
+          name: row.name,
+          size: row.size ?? "",
+          guage: row.guage ?? "",
+        },
         update: {
           $set: {
             name: row.name,
+            size: row.size ?? "",
+            guage: row.guage ?? "",
             rate: row.rate,
             ratePerUnit: row.ratePerUnit,
             quantity: row.quantity ?? 1,

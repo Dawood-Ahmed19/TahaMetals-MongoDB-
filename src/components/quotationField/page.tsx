@@ -35,7 +35,6 @@ interface InventoryItem {
 const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   onSaveSuccess,
 }) => {
-  // Start with 1 row only
   const [rows, setRows] = useState<QuotationRow[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [discount, setDiscount] = useState<number>(0);
@@ -105,14 +104,19 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       try {
         const res = await fetch("/api/ratelist");
         const data = await res.json();
+
         if (data.success && Array.isArray(data.items)) {
           const rates: Record<string, { rate: number; ratePerUnit: number }> =
             {};
           data.items.forEach((item) => {
             if (item.name) {
-              rates[item.name.toLowerCase()] = {
-                rate: item.rate ?? 0,
-                ratePerUnit: item.ratePerUnit ?? 0,
+              // composite key: name|size|guage
+              const key = `${item.name.toLowerCase()}|${item.size ?? ""}|${
+                item.guage ?? ""
+              }`;
+              rates[key] = {
+                rate: Number(item.rate) || 0,
+                ratePerUnit: Number(item.ratePerUnit) || 0, // convert "160" → 160
               };
             }
           });
@@ -125,12 +129,10 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     fetchRates();
   }, []);
 
-  // totals
   const total = rows.reduce((acc, row) => acc + (row.amount || 0), 0);
   const grandTotal = total - discount;
   const balance = grandTotal - received;
 
-  // handleChange logic (same as yours)
   const handleChange = (
     index: number,
     field: keyof QuotationRow,
@@ -141,17 +143,19 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     if (isNaN(numValue) || numValue < 0) numValue = 0;
 
     if (field === "item") {
-      const lower = (value?.toString() ?? "").toLowerCase();
+      const [name, size, guage] = (value ?? "").split("|");
+
       const selected = inventoryItems.find(
-        (inv) => inv.name?.toLowerCase() === lower
+        (inv) =>
+          inv.name === name &&
+          (size === "" || inv.size?.toString() === size) &&
+          (guage === "" || inv.guage?.toString() === guage)
       );
 
       if (selected) {
         let displayItem = "";
         if (selected.type.toLowerCase().includes("pillar")) {
-          displayItem = `${selected.type} ${
-            selected.size ? selected.size : ""
-          } ${
+          displayItem = `${selected.type} ${selected.size || ""} ${
             selected.gote &&
             selected.gote.trim() !== "" &&
             selected.gote.toLowerCase() !== "without gote"
@@ -159,21 +163,25 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
               : ""
           } - ${selected.guage || ""}`.trim();
         } else if (selected.type.toLowerCase() === "hardware") {
-          displayItem = `${selected.name}${selected.size ? selected.size : ""}${
+          displayItem = `${selected.name} ${
+            selected.size ? selected.size : ""
+          }${
             selected.color && selected.color.trim() !== "" ? selected.color : ""
           }`;
         } else {
-          displayItem = `${selected.type} ${
-            selected.size ? selected.size : ""
-          } - ${selected.guage || ""}`.trim();
+          displayItem = `${selected.type} ${selected.size || ""} - ${
+            selected.guage || ""
+          }`.trim();
         }
 
-        const qty = newRows[index].qty || 1;
-        const rawRate =
-          rateList[selected.name.toLowerCase()]?.ratePerUnit ??
-          selected.pricePerUnit ??
-          0;
-        const rateFromList = Math.round(Number(rawRate));
+        const qty =
+          newRows[index].qty && newRows[index].qty > 0 ? newRows[index].qty : 1;
+
+        const key = `${selected.name.toLowerCase()}|${selected.size ?? ""}|${
+          selected.guage ?? ""
+        }`;
+        const rawRate = rateList[key]?.ratePerUnit || 0;
+        const rateFromList = Number(rawRate) || 0;
 
         let weight = 0;
         let amount = 0;
@@ -202,26 +210,14 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
           guage: selected.guage?.toString() || "",
           gote: selected.gote?.toString() || "",
         };
-      } else {
-        newRows[index] = {
-          ...newRows[index],
-          item: value,
-          originalName: value,
-          size: "",
-          qty: 0,
-          weight: 0,
-          rate: 0,
-          amount: 0,
-          guage: "",
-          gote: "",
-        };
       }
     } else if (field === "qty") {
       const selected = inventoryItems.find(
         (inv) =>
           inv.name.toLowerCase() ===
             newRows[index].originalName?.toLowerCase() &&
-          inv.size?.toString() === newRows[index].size?.toString()
+          inv.size?.toString() === newRows[index].size?.toString() &&
+          inv.guage?.toString() === newRows[index].guage?.toString()
       );
 
       if (selected) {
@@ -230,12 +226,11 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
           alert(`Only ${selected.quantity} units available in stock!`);
         }
 
-        const rateFromList =
-          Math.round(
-            rateList[selected.name.toLowerCase()]?.ratePerUnit ??
-              selected.pricePerUnit ??
-              0
-          ) ?? 0;
+        const key = `${selected.name.toLowerCase()}|${selected.size ?? ""}|${
+          selected.guage ?? ""
+        }`;
+        const rawRate = rateList[key]?.ratePerUnit || 0;
+        const rateFromList = Number(rawRate) || 0;
 
         let weight = 0;
         let amount = 0;
@@ -265,6 +260,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         newRows[index].qty = numValue;
       }
     } else if (field === "rate") {
+      // manual override case
       numValue = Math.round(numValue);
       newRows[index] = { ...newRows[index], rate: numValue };
       const qty = Number(newRows[index].qty) || 0;
@@ -287,7 +283,6 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     }
     try {
       setIsSaving(true);
-      // (keep your save logic exactly same as before)
       const response = await fetch("/api/quotations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -393,9 +388,11 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                     options={inventoryItems
                       .filter((inv) => inv.quantity > 0)
                       .map((inv) => ({
-                        value: inv.name,
+                        value: `${inv.name}|${inv.size ?? ""}|${
+                          inv.guage ?? ""
+                        }`,
                         label: inv.type.toLowerCase().includes("pillar")
-                          ? `${inv.type} ${inv.size || ""} ${
+                          ? `${inv.type} ${inv.size || " "} ${
                               inv.gote &&
                               inv.gote.trim() !== "" &&
                               inv.gote.toLowerCase() !== "without gote"
@@ -403,7 +400,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                                 : ""
                             } - ${inv.guage || ""}`.trim()
                           : inv.type.toLowerCase() === "hardware"
-                          ? `${inv.name}${inv.size ? inv.size : ""}${
+                          ? `${inv.name} ${inv.size ? inv.size : ""}${
                               inv.color && inv.color.trim() !== ""
                                 ? inv.color
                                 : ""
@@ -416,12 +413,11 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                       handleChange(i, "item", selectedOption?.value ?? "")
                     }
                     value={
-                      row.item
+                      row.originalName
                         ? {
-                            value:
-                              inventoryItems.find(
-                                (inv) => inv.name === row.originalName
-                              )?.name || row.item,
+                            value: `${row.originalName}|${row.size ?? ""}|${
+                              row.guage ?? ""
+                            }`,
                             label: row.item,
                           }
                         : null
