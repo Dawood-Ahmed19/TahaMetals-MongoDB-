@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { generateInvoicePDF } from "@/utils/generateInvoicePDF";
+import { useRouter } from "next/navigation";
 
 interface Payment {
   amount: number;
@@ -29,6 +30,7 @@ const ShowInvoices = () => {
   const [newPayment, setNewPayment] = useState({ amount: 0, date: "" });
   const [filterOption, setFilterOption] = useState("All");
   const [errorMessage, setErrorMessage] = useState("");
+  const router = useRouter();
 
   const getReceived = (q: Quotation): number =>
     q.payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
@@ -226,11 +228,19 @@ const ShowInvoices = () => {
                   >
                     Add Payment
                   </button>
+                  {/* View Invoice */}
+                  <button
+                    onClick={() => router.push(`/Invoice/${q._id}`)}
+                    className="text-purple-400 hover:cursor-pointer"
+                  >
+                    View Invoice
+                  </button>
+
+                  {/* Download PDF */}
+
                   <button
                     onClick={async () => {
                       await generateInvoicePDF(q.quotationId);
-                      // optional: refresh invoices list
-                      // await fetchQuotations();
                     }}
                     className="text-yellow-400 hover:cursor-pointer"
                   >

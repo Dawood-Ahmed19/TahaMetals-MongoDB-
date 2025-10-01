@@ -1,0 +1,166 @@
+"use client";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+
+const InvoiceDetails = () => {
+  const { id } = useParams();
+  const router = useRouter();
+  const [invoice, setInvoice] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchInvoice = async () => {
+      try {
+        const res = await fetch(`/api/quotations/${id}`);
+        const data = await res.json();
+        if (data.success) {
+          setInvoice(data.quotation);
+        }
+      } catch (err) {
+        console.error("Error fetching invoice:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInvoice();
+  }, [id]);
+
+  if (loading)
+    return <p className="text-white text-center p-6">Loading invoice…</p>;
+  if (!invoice)
+    return <p className="text-red-500 text-center p-6">Invoice not found</p>;
+
+  const total = invoice.items.reduce(
+    (acc: number, row: any) => acc + (row.amount || 0),
+    0
+  );
+  const grandTotal = total - (invoice.discount || 0) + (invoice.loading || 0);
+  const received =
+    invoice.payments?.reduce(
+      (sum: number, p: any) => sum + (p.amount || 0),
+      0
+    ) || 0;
+  const balance = grandTotal - received;
+
+  return (
+    <div className="flex justify-center items-center min-h-screen w-full">
+      <div className="w-full max-w-3xl bg-dashboardBg p-6 rounded-lg shadow-lg">
+        {/* Back Button */}
+        <button
+          onClick={() => router.back()}
+          className="mb-4 px-4 py-2 bg-white rounded hover:bg-gray-600"
+        >
+          ← Back
+        </button>
+
+        {/* Invoice Header */}
+        <h1 className="text-2xl font-bold mb-2 text-center text-white">
+          Invoice {invoice.quotationId}
+        </h1>
+        <p className="text-center text-gray-300 mb-6">
+          Date: {new Date(invoice.date).toLocaleDateString()} | Status:{" "}
+          <span className="capitalize">{invoice.status}</span>
+        </p>
+
+        {/* Invoice Table */}
+        <div className="flex justify-center">
+          <table className="text-white table-auto border-collapse border border-gray-600 w-full">
+            <thead>
+              <tr className="bg-bgColor text-center h-[40px]">
+                <th className="border border-white p-2 w-[60px]">Qty</th>
+                <th className="border border-white p-2 w-[200px]">Item</th>
+                <th className="border border-white p-2 w-[80px]">Guage</th>
+                <th className="border border-white p-2 w-[80px]">Weight</th>
+                <th className="border border-white p-2 w-[100px]">Rate</th>
+                <th className="border border-white p-2 w-[100px]">Amount</th>
+              </tr>
+            </thead>
+            <tbody className="align-top">
+              {invoice.items.map((row: any, i: number) => (
+                <tr key={row.uniqueKey || i} className="text-center h-[30px]">
+                  <td className="border border-white">{row.qty}</td>
+                  <td className="border border-white">{row.item}</td>
+                  <td className="border border-white">{row.guage || ""}</td>
+                  <td className="border border-white">
+                    {row.weight
+                      ? Number(row.weight).toLocaleString("en-US", {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 2,
+                        })
+                      : ""}
+                  </td>
+                  <td className="border border-white">
+                    {Number(row.rate).toLocaleString("en-US")}
+                  </td>
+                  <td className="border border-white">
+                    {Number(row.amount).toLocaleString("en-US")}
+                  </td>
+                </tr>
+              ))}
+
+              {/* Totals */}
+              <tr className="bg-BgColor font-bold">
+                <td colSpan={4}></td>
+                <td className="border border-white text-center">TOTAL</td>
+                <td className="border border-white text-center">
+                  {total.toLocaleString("en-US")}
+                </td>
+              </tr>
+              <tr className="bg-BgColor font-bold">
+                <td colSpan={4}></td>
+                <td className="border border-white text-center">DISCOUNT</td>
+                <td className="border border-white text-center">
+                  {invoice.discount || 0}
+                </td>
+              </tr>
+              <tr className="bg-BgColor font-bold">
+                <td colSpan={4}></td>
+                <td className="border border-white text-center">LOADING</td>
+                <td className="border border-white text-center">
+                  {invoice.loading || 0}
+                </td>
+              </tr>
+              <tr className="bg-BgColor font-bold">
+                <td colSpan={4}></td>
+                <td className="border border-white text-center">GRAND TOTAL</td>
+                <td className="border border-white text-center">
+                  {grandTotal.toLocaleString("en-US")}
+                </td>
+              </tr>
+              <tr className="bg-BgColor font-bold">
+                <td colSpan={4}></td>
+                <td className="border border-white text-center">RECEIVED</td>
+                <td className="border border-white text-center">
+                  {received.toLocaleString("en-US")}
+                </td>
+              </tr>
+              <tr className="bg-BgColor font-bold">
+                <td colSpan={4}></td>
+                <td className="border border-white text-center">BALANCE</td>
+                <td className="border border-white text-center">
+                  {balance.toLocaleString("en-US")}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Payments */}
+        <h2 className="mt-8 text-lg font-semibold text-white">Payments</h2>
+        {invoice.payments?.length ? (
+          <ul className="list-disc pl-6 mt-2 text-gray-200">
+            {invoice.payments.map((p: any, i: number) => (
+              <li key={i}>
+                {new Date(p.date).toLocaleDateString()} — {p.amount} Rs
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-400 mt-2">No payments recorded</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default InvoiceDetails;

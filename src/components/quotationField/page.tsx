@@ -184,9 +184,8 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   }, []);
 
   const total = rows.reduce((acc, row) => acc + (row.amount || 0), 0);
-  const grandTotal = total - discount;
+  const grandTotal = total - discount + loading;
   const balance = grandTotal - received;
-
   const handleChange = (
     index: number,
     field: keyof QuotationRow,
@@ -237,19 +236,18 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         const rawRate = rateList[key]?.ratePerUnit || 0;
         const rateFromList = Number(rawRate) || 0;
 
+        // calculate weight for reference
         let weight = 0;
-        let amount = 0;
         if (
-          selected.type.toLowerCase() === "hardware" ||
-          selected.type.toLowerCase().includes("pillar")
+          !(
+            selected.type.toLowerCase() === "hardware" ||
+            selected.type.toLowerCase().includes("pillar")
+          )
         ) {
-          amount = qty * rateFromList;
-        } else {
           const singleWeight = selected.quantity
             ? (selected.weight ?? 0) / selected.quantity
             : 0;
           weight = singleWeight * qty;
-          amount = rateFromList * qty;
         }
 
         newRows[index] = {
@@ -260,25 +258,39 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
           qty,
           weight,
           rate: rateFromList,
-          amount: Math.round(amount),
           guage: selected.guage?.toString() || "",
           gote: selected.gote?.toString() || "",
         };
       }
     } else if (field === "qty") {
-      // ... same qty logic (shortened for brevity, you keep yours)
+      const currentItem = newRows[index].originalName;
+      const currentSize = newRows[index].size;
+      const currentGuage = newRows[index].guage;
+
+      const inventoryItem = inventoryItems.find(
+        (inv) =>
+          inv.name === currentItem &&
+          (currentSize === "" || inv.size?.toString() === currentSize) &&
+          (currentGuage === "" || inv.guage?.toString() === currentGuage)
+      );
+
+      if (inventoryItem && numValue > inventoryItem.quantity) {
+        showMessage(`⚠️ Only ${inventoryItem.quantity} in stock.`, 2500);
+        return;
+      }
+
       newRows[index].qty = numValue;
     } else if (field === "rate") {
       numValue = Math.round(numValue);
-      newRows[index] = { ...newRows[index], rate: numValue };
-      const qty = Number(newRows[index].qty) || 0;
-      newRows[index].amount = Math.round(qty * numValue);
+      newRows[index].rate = numValue;
     } else {
       newRows[index] = { ...newRows[index], [field]: numValue };
-      const qty = Number(newRows[index].qty) || 0;
-      const rate = Number(newRows[index].rate) || 0;
-      newRows[index].amount = Math.round(qty * rate);
     }
+
+    // ✅ Central recalculation
+    const qty = Number(newRows[index].qty) || 0;
+    const rate = Number(newRows[index].rate) || 0;
+    newRows[index].amount = Math.round(qty * rate);
 
     setRows(newRows);
   };
