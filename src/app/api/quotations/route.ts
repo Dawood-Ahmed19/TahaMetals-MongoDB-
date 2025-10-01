@@ -268,7 +268,6 @@ export async function POST(req: Request) {
     const totalReceived = safePayments.reduce((s, p) => s + p.amount, 0);
     const balance = grandTotal - totalReceived;
 
-    // ✅ UPDATE EXISTING QUOTATION
     if (quotationId) {
       const existing = await quotationsCol.findOne({ quotationId });
       if (existing) {
@@ -313,7 +312,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // ✅ NEW QUOTATION
     const count = await quotationsCol.countDocuments({});
     const newQuotationId = `INV-${String(count + 1).padStart(4, "0")}`;
 
