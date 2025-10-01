@@ -81,10 +81,7 @@ export const generateInvoicePDF = async (quotationId: string) => {
     const brandX = 40,
       brandY = 30;
 
-    doc
-      .setFontSize(18)
-      .setFont("helvetica", "bold")
-      .setTextColor(253, 186, 116);
+    doc.setFontSize(18).setFont("helvetica", "bold").setTextColor(0, 0, 0);
     doc.text("Taha", brandX, brandY);
     const tahaWidth = (doc as any).getTextWidth("Taha");
     doc.setTextColor(0, 0, 0);

@@ -42,18 +42,36 @@ const InvoiceDetails = () => {
     ) || 0;
   const balance = grandTotal - received;
 
+  const formatItemName = (row: any) => {
+    const type = row.type?.toLowerCase();
+    if (!type) return row.item;
+
+    if (type.includes("pipe")) {
+      return `${row.type} ${row.size || ""}`.trim();
+    }
+
+    if (type.includes("pillar")) {
+      return `${row.type} ${row.gote || ""}G`.trim();
+    }
+
+    if (type === "hardware") {
+      return `${row.originalName || ""} ${row.size || ""} ${
+        row.color || ""
+      }`.trim();
+    }
+
+    return row.item;
+  };
+
   return (
     <div className="flex justify-center items-center min-h-screen w-full">
       <div className="w-full max-w-3xl bg-dashboardBg p-6 rounded-lg shadow-lg">
-        {/* Back Button */}
         <button
           onClick={() => router.back()}
           className="mb-4 px-4 py-2 bg-white rounded hover:bg-gray-600"
         >
           ← Back
         </button>
-
-        {/* Invoice Header */}
         <h1 className="text-2xl font-bold mb-2 text-center text-white">
           Invoice {invoice.quotationId}
         </h1>
@@ -62,7 +80,6 @@ const InvoiceDetails = () => {
           <span className="capitalize">{invoice.status}</span>
         </p>
 
-        {/* Invoice Table */}
         <div className="flex justify-center">
           <table className="text-white table-auto border-collapse border border-gray-600 w-full">
             <thead>
@@ -79,7 +96,7 @@ const InvoiceDetails = () => {
               {invoice.items.map((row: any, i: number) => (
                 <tr key={row.uniqueKey || i} className="text-center h-[30px]">
                   <td className="border border-white">{row.qty}</td>
-                  <td className="border border-white">{row.item}</td>
+                  <td className="border border-white">{formatItemName(row)}</td>
                   <td className="border border-white">{row.guage || ""}</td>
                   <td className="border border-white">
                     {row.weight
@@ -97,7 +114,6 @@ const InvoiceDetails = () => {
                   </td>
                 </tr>
               ))}
-
               {/* Totals */}
               <tr className="bg-BgColor font-bold">
                 <td colSpan={4}></td>
@@ -145,7 +161,6 @@ const InvoiceDetails = () => {
           </table>
         </div>
 
-        {/* Payments */}
         <h2 className="mt-8 text-lg font-semibold text-white">Payments</h2>
         {invoice.payments?.length ? (
           <ul className="list-disc pl-6 mt-2 text-gray-200">

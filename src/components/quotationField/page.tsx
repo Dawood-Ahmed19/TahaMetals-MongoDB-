@@ -16,6 +16,8 @@ type QuotationRow = {
   uniqueKey: string;
   guage: string | number | "";
   gote?: string | "";
+  type?: string;
+  color?: string;
 };
 
 interface InventoryItem {
@@ -51,6 +53,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   const [mounted, setMounted] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const messageTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const [isValid, setIsValid] = useState(false);
 
   const showMessage = (text: string, duration = 1500) => {
     setMessage(text);
@@ -186,6 +189,8 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   const total = rows.reduce((acc, row) => acc + (row.amount || 0), 0);
   const grandTotal = total - discount + loading;
   const balance = grandTotal - received;
+  const isReceivedValid = received <= grandTotal;
+
   const handleChange = (
     index: number,
     field: keyof QuotationRow,
@@ -222,9 +227,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
             selected.color && selected.color.trim() !== "" ? selected.color : ""
           }`;
         } else {
-          displayItem = `${selected.type} ${selected.size || ""} - ${
-            selected.guage || ""
-          }`.trim();
+          displayItem = `${selected.type} ${selected.size || ""}`.trim();
         }
 
         const qty =
@@ -287,7 +290,6 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       newRows[index] = { ...newRows[index], [field]: numValue };
     }
 
-    // ✅ Central recalculation
     const qty = Number(newRows[index].qty) || 0;
     const rate = Number(newRows[index].rate) || 0;
     newRows[index].amount = Math.round(qty * rate);
@@ -377,7 +379,13 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
           quotationId: quotationId || undefined,
           items: validRows.map((row) => ({
             ...row,
-            item: row.originalName || row.item,
+            item: row.item,
+            originalName: row.originalName,
+            type: row.type,
+            size: row.size,
+            guage: row.guage,
+            gote: row.gote,
+            color: row.color,
           })),
           discount,
           total,
@@ -702,8 +710,18 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
                 <input
                   type="number"
                   min={0}
+                  max={grandTotal}
                   value={received}
-                  onChange={(e) => setReceived(Number(e.target.value) || 0)}
+                  onChange={(e) => {
+                    const value = Number(e.target.value) || 0;
+                    setReceived(value);
+                    if (value > grandTotal) {
+                      showMessage(
+                        "⚠️ Received amount cannot exceed Grand Total",
+                        2500
+                      );
+                    }
+                  }}
                   className="bg-transparent text-center w-full outline-none"
                 />
               </td>
@@ -792,8 +810,12 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         {!quotationId ? (
           <button
             onClick={saveQuotation}
-            disabled={isSaving}
-            className="mt-5 bg-blue-600 px-4 py-2 rounded text-white disabled:opacity-50"
+            disabled={isSaving || !isReceivedValid}
+            className={`mt-5 px-4 py-2 rounded text-white disabled:opacity-50 ${
+              !isReceivedValid
+                ? "bg-gray-500 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
           >
             {isSaving ? "Loading..." : "Save"}
           </button>
@@ -801,11 +823,16 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
           <>
             <button
               onClick={saveQuotation}
-              disabled={isSaving}
-              className="mt-5 bg-yellow-600 px-4 py-2 rounded text-white disabled:opacity-50"
+              disabled={isSaving || !isReceivedValid}
+              className={`mt-5 px-4 py-2 rounded text-white disabled:opacity-50 ${
+                !isReceivedValid
+                  ? "bg-gray-500 cursor-not-allowed"
+                  : "bg-yellow-600 hover:bg-yellow-700"
+              }`}
             >
               {isSaving ? "Loading..." : "Update Invoice"}
             </button>
+
             <button
               onClick={async () => await handleGeneratePdf()}
               disabled={isGeneratingPdf}

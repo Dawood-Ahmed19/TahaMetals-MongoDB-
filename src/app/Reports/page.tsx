@@ -210,28 +210,28 @@ const Reports = () => {
               )}
             </tbody>
           </table>
+          <div className="flex justify-between items-center mt-4">
+            <button
+              className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
+              onClick={() => setCurrentPage((p) => p - 1)}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </button>
+            <span className="text-gray-300">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
+              onClick={() => setCurrentPage((p) => p + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </button>
+          </div>
         </div>
 
         {/* Pagination */}
-        <div className="flex justify-between items-center mt-4">
-          <button
-            className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
-            onClick={() => setCurrentPage((p) => p - 1)}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </button>
-          <span className="text-gray-300">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
-            onClick={() => setCurrentPage((p) => p + 1)}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </button>
-        </div>
       </span>
     </div>
   );

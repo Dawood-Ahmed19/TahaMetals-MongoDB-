@@ -5,10 +5,10 @@ import { NextResponse } from "next/server";
 // -------- GET Single Invoice ----------
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
 
     const client = await clientPromise;
     const db = client.db("TahaMetals");

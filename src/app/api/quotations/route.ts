@@ -26,6 +26,163 @@ interface Quotation {
 
 // ✅ Create new quotation
 
+// export async function POST(req: Request) {
+//   try {
+//     const {
+//       items,
+//       discount,
+//       total,
+//       grandTotal,
+//       payments,
+//       loading,
+//       quotationId,
+//     } = await req.json();
+
+//     const client = await clientPromise;
+//     const db = client.db("TahaMetals");
+//     const quotationsCol = db.collection<Quotation>("quotations");
+//     const inventoryCol = db.collection("inventory");
+
+//     const enrichedItems: any[] = [];
+
+//     for (const soldItem of items) {
+//       const { item, qty, weight, rate } = soldItem;
+
+//       // Find in inventory
+//       const inventoryItem = await inventoryCol.findOne({ name: item });
+//       if (!inventoryItem) {
+//         return NextResponse.json(
+//           { success: false, error: `❌ No inventory found for "${item}".` },
+//           { status: 400 }
+//         );
+//       }
+
+//       if (Number(qty) > Number(inventoryItem.quantity)) {
+//         return NextResponse.json(
+//           {
+//             success: false,
+//             error: `❌ Not enough stock for "${item}". Available: ${inventoryItem.quantity}, Requested: ${qty}`,
+//           },
+//           { status: 400 }
+//         );
+//       }
+
+//       const costPerUnit = Number(inventoryItem.pricePerUnit);
+//       const invoiceRatePerUnit = Number(rate);
+
+//       const profitPerUnit = Math.round(invoiceRatePerUnit - costPerUnit);
+//       const totalProfit = Math.round(profitPerUnit * qty);
+
+//       enrichedItems.push({
+//         ...soldItem,
+//         costPerUnit,
+//         invoiceRatePerUnit,
+//         profitPerUnit,
+//         totalProfit,
+//       });
+//     }
+
+//     const quotationTotalProfit = enrichedItems.reduce(
+//       (sum, i) => sum + (i.totalProfit || 0),
+//       0
+//     );
+
+//     const safePayments: Payment[] = Array.isArray(payments) ? payments : [];
+//     const totalReceived = safePayments.reduce((s, p) => s + p.amount, 0);
+//     const balance = grandTotal - totalReceived;
+
+//     // ✅ If quotationId exists, update instead of insert
+//     if (quotationId) {
+//       const existing = await quotationsCol.findOne({ quotationId });
+
+//       if (existing) {
+//         await quotationsCol.updateOne(
+//           { quotationId },
+//           {
+//             $set: {
+//               items: enrichedItems,
+//               discount,
+//               total,
+//               grandTotal,
+//               payments: safePayments,
+//               amount: grandTotal,
+//               date: new Date().toISOString(),
+//               quotationTotalProfit,
+//               loading: Number(loading) || 0,
+//               totalReceived,
+//               balance,
+//               status: "active",
+//             },
+//           }
+//         );
+
+//         return NextResponse.json({
+//           success: true,
+//           quotation: {
+//             ...existing,
+//             items: enrichedItems,
+//             discount,
+//             total,
+//             grandTotal,
+//             payments: safePayments,
+//             amount: grandTotal,
+//             date: new Date().toISOString(),
+//             loading: Number(loading) || 0,
+//             quotationTotalProfit,
+//             totalReceived,
+//             balance,
+//             status: "active",
+//           },
+//         });
+//       }
+//     }
+
+//     // 2️⃣ If no quotationId, create new
+//     const count = await quotationsCol.countDocuments({});
+//     const newQuotationId = `INV-${String(count + 1).padStart(4, "0")}`;
+
+//     const result = await quotationsCol.insertOne({
+//       quotationId: newQuotationId,
+//       items: enrichedItems,
+//       discount,
+//       total,
+//       grandTotal,
+//       payments: safePayments,
+//       amount: grandTotal,
+//       date: new Date().toISOString(),
+//       quotationTotalProfit,
+//       loading: Number(loading) || 0,
+//       status: "active",
+//     });
+
+//     return NextResponse.json({
+//       success: true,
+//       quotation: {
+//         _id: result.insertedId,
+//         quotationId: newQuotationId,
+//         items: enrichedItems,
+//         discount,
+//         total,
+//         grandTotal,
+//         payments: safePayments,
+//         amount: grandTotal,
+//         date: new Date().toISOString(),
+//         loading: Number(loading) || 0,
+//         quotationTotalProfit,
+//         totalReceived,
+//         balance,
+//         status: "active",
+//       },
+//     });
+//   } catch (err: any) {
+//     console.error("Error saving quotation:", err);
+//     return NextResponse.json(
+//       { success: false, error: "Failed to save quotation" },
+//       { status: 500 }
+//     );
+//   }
+// }
+
 export async function POST(req: Request) {
   try {
     const {
@@ -46,10 +203,15 @@ export async function POST(req: Request) {
     const enrichedItems: any[] = [];
 
     for (const soldItem of items) {
-      const { item, qty, weight, rate } = soldItem;
+      const { item, qty, weight, rate, originalName, size, guage } = soldItem;
 
-      // Find in inventory
-      const inventoryItem = await inventoryCol.findOne({ name: item });
+      // ✅ Use (originalName, size, guage) to find exact product in inventory
+      const inventoryItem = await inventoryCol.findOne({
+        name: originalName || item, // fallback to item if originalName missing
+        size: size || "",
+        guage: guage || "",
+      });
+
       if (!inventoryItem) {
         return NextResponse.json(
           { success: false, error: `❌ No inventory found for "${item}".` },
@@ -67,9 +229,9 @@ export async function POST(req: Request) {
         );
       }
 
+      // ✅ Calculate profit per unit
       const costPerUnit = Number(inventoryItem.pricePerUnit);
       const invoiceRatePerUnit = Number(rate);
-
       const profitPerUnit = Math.round(invoiceRatePerUnit - costPerUnit);
       const totalProfit = Math.round(profitPerUnit * qty);
 
@@ -80,6 +242,21 @@ export async function POST(req: Request) {
         profitPerUnit,
         totalProfit,
       });
+
+      // ✅ Deduct from inventory
+      await inventoryCol.updateOne(
+        {
+          name: inventoryItem.name,
+          size: inventoryItem.size || "",
+          guage: inventoryItem.guage || "",
+        },
+        {
+          $inc: {
+            quantity: -Number(qty),
+            weight: -Number(weight || 0), // handles pipe weight reductions too
+          },
+        }
+      );
     }
 
     const quotationTotalProfit = enrichedItems.reduce(
@@ -91,10 +268,9 @@ export async function POST(req: Request) {
     const totalReceived = safePayments.reduce((s, p) => s + p.amount, 0);
     const balance = grandTotal - totalReceived;
 
-    // ✅ If quotationId exists, update instead of insert
+    // ✅ UPDATE EXISTING QUOTATION
     if (quotationId) {
       const existing = await quotationsCol.findOne({ quotationId });
-
       if (existing) {
         await quotationsCol.updateOne(
           { quotationId },
@@ -137,7 +313,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2️⃣ If no quotationId, create new
+    // ✅ NEW QUOTATION
     const count = await quotationsCol.countDocuments({});
     const newQuotationId = `INV-${String(count + 1).padStart(4, "0")}`;
 
