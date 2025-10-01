@@ -7,7 +7,6 @@ interface Payment {
   date: string;
 }
 
-// ✅ POST /api/quotations/[id]/addPayments
 export async function POST(
   req: Request,
   { params }: { params: { id: string } }
@@ -16,7 +15,6 @@ export async function POST(
     const { id } = params;
     const { amount, date } = await req.json();
 
-    // 1️⃣ Validate ObjectId
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
         { success: false, error: "Invalid quotation ID" },
@@ -24,7 +22,6 @@ export async function POST(
       );
     }
 
-    // 2️⃣ Validate amount
     const parsedAmount = parseInt(amount, 10);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return NextResponse.json(
@@ -37,7 +34,6 @@ export async function POST(
     const db = client.db("TahaMetals");
     const quotationsCol = db.collection("quotations");
 
-    // 3️⃣ Fetch existing quotation
     const quotation = await quotationsCol.findOne({ _id: new ObjectId(id) });
     if (!quotation) {
       return NextResponse.json(
@@ -50,14 +46,12 @@ export async function POST(
       ? quotation.payments
       : [];
 
-    // 4️⃣ Add new payment (always integer)
     const newPayment: Payment = {
       amount: parsedAmount,
       date: date || new Date().toISOString(),
     };
     const updatedPayments = [...existingPayments, newPayment];
 
-    // 5️⃣ Recalculate totals (always integers)
     const totalReceived = parseInt(
       updatedPayments.reduce((s, p) => s + p.amount, 0).toString(),
       10
@@ -71,7 +65,6 @@ export async function POST(
       0
     );
 
-    // 6️⃣ Save back to DB
     await quotationsCol.updateOne(
       { _id: new ObjectId(id) },
       {
@@ -83,7 +76,6 @@ export async function POST(
       }
     );
 
-    // 7️⃣ Return updated quotation
     return NextResponse.json({
       success: true,
       quotation: {

@@ -53,7 +53,6 @@ export async function DELETE(
     const quotations = db.collection("quotations");
     const inventory = db.collection("inventory");
 
-    // Find invoice first
     let query: any = {};
     if (ObjectId.isValid(id)) {
       query = { _id: new ObjectId(id) };
@@ -78,7 +77,7 @@ export async function DELETE(
         const weightToRestore = Number(item.weight) || 0;
 
         const result = await inventory.updateOne(
-          { name: item.originalName }, // matches your schema
+          { name: item.originalName },
           {
             $inc: {
               quantity: qtyToRestore,
@@ -87,7 +86,6 @@ export async function DELETE(
           }
         );
 
-        // 🚨 Safeguard: if no document matched, insert a new one
         if (result.matchedCount === 0) {
           console.warn(
             `No inventory found for ${item.originalName}, inserting new...`
@@ -95,7 +93,7 @@ export async function DELETE(
 
           await inventory.insertOne({
             name: item.originalName,
-            type: item.item ?? "unknown", // use invoice item text as backup
+            type: item.item ?? "unknown",
             size: item.size ?? "",
             guage: item.guage ?? "",
             gote: item.gote ?? "",
@@ -111,7 +109,6 @@ export async function DELETE(
       }
     }
 
-    // ✅ Delete the invoice
     const result = await quotations.deleteOne({ _id: invoice._id });
 
     if (result.deletedCount === 0) {
