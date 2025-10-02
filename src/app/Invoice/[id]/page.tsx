@@ -84,7 +84,6 @@ const InvoiceDetails = () => {
             <span className="capitalize">{invoice.status}</span>
           </p>
 
-          {/* ✅ Table */}
           <div className="flex justify-center">
             <table className="text-white table-auto border-collapse border border-gray-600 w-full bg-transparent">
               <thead>

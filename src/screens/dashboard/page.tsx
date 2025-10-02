@@ -6,17 +6,20 @@ import ShowInvoices from "@/components/ShowInvoices/page";
 import ShowItem from "@/components/ShowItem/page";
 import { useEffect, useState } from "react";
 import Loader from "@/components/Loader/page";
+import TotalReturns from "@/components/totalReturns/page";
+import ShowReturned from "@/components/showReturned/page";
 
 export default function DashboardScreen() {
   const today = new Date();
 
-  const [activeTab, setActiveTab] = useState<"items" | "quotations">(
-    "quotations"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "items" | "quotations" | "returns"
+  >("quotations");
   const [loading, setLoading] = useState(false);
   const [quotationCount, setQuotationCount] = useState(0);
+  const [returnCount, setReturnCount] = useState(0);
 
-  const handleTabSwitch = (tab: "items" | "quotations") => {
+  const handleTabSwitch = (tab: "items" | "quotations" | "returns") => {
     if (tab === activeTab) return;
     setLoading(true);
     setActiveTab(tab);
@@ -34,19 +37,25 @@ export default function DashboardScreen() {
   });
 
   useEffect(() => {
-    const fetchQuotations = async () => {
+    const fetchQuotationsAndReturns = async () => {
       try {
         const res = await fetch("/api/quotations");
         const data = await res.json();
         if (data.success) {
           setQuotationCount(data.count);
         }
+
+        const resRet = await fetch("/api/returns");
+        const dataRet = await resRet.json();
+        if (dataRet.success) {
+          setReturnCount(dataRet.returns?.length ?? 0);
+        }
       } catch (err) {
         console.error("Error fetching quotations:", err);
       }
     };
 
-    fetchQuotations();
+    fetchQuotationsAndReturns();
   }, []);
 
   return (
@@ -74,6 +83,12 @@ export default function DashboardScreen() {
         >
           <TotalQuotations count={quotationCount} />
         </button>
+        <button
+          className="hover:cursor-pointer"
+          onClick={() => handleTabSwitch("returns")}
+        >
+          <TotalReturns count={returnCount} />
+        </button>
       </span>
 
       {/* Recent Invoices */}
@@ -83,6 +98,8 @@ export default function DashboardScreen() {
         <ShowInvoices />
       ) : activeTab === "items" ? (
         <ShowItem />
+      ) : activeTab === "returns" ? (
+        <ShowReturned />
       ) : (
         ""
       )}

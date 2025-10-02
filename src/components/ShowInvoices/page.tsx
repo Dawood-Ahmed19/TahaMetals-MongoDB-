@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 interface Payment {
   amount: number;
   date: string;
+  note?: string;
 }
 
 interface Quotation {

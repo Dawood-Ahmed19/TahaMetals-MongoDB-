@@ -26,32 +26,29 @@ interface Invoice {
 const ReturnItems = () => {
   const [invoiceId, setInvoiceId] = useState("");
   const [invoice, setInvoice] = useState<Invoice | null>(null);
-  const [selectedItem, setSelectedItem] = useState<string>("");
-  const [qty, setQty] = useState<number>(1);
+  const [selectedItems, setSelectedItems] = useState<
+    { itemName: string; qty: number }[]
+  >([]);
   const [message, setMessage] = useState("");
+  const [returnId, setReturnId] = useState<string | null>(null);
 
-  // DisplayName Generator
   const getDisplayName = (item: InvoiceItem): string => {
     if (!item) return "";
 
     const type = item.type?.toLowerCase() || "";
-
     if (type === "hardware") {
       return `${item.name || ""}${item.size ? " " + item.size : ""}${
         item.color && item.color.trim() !== "" ? " " + item.color : ""
       }`;
     }
-
     if (type.includes("pillar")) {
       return `${item.type || "Pillar"}${item.size ? " " + item.size : ""}${
         item.guage ? " " + item.guage : ""
       }${item.gote && item.gote.trim() !== "" ? " - " + item.gote : ""}`;
     }
-
     if (type === "pipe") {
       return `${item.type || "Pipe"}${item.size ? " " + item.size : ""}`;
     }
-
     return `${item.type || ""}${item.size ? " " + item.size : ""}`.trim();
   };
 
@@ -63,10 +60,8 @@ const ReturnItems = () => {
       const data = await res.json();
 
       if (data.success && data.quotations.length > 0) {
-        // enrich with inventory info
         const invRes = await fetch("/api/inventory");
         const invData = await invRes.json();
-
         const inventory = invData.items || [];
 
         const enrichedItems = data.quotations[0].items.map((it: any) => {
@@ -77,15 +72,31 @@ const ReturnItems = () => {
         });
 
         setInvoice({ ...data.quotations[0], items: enrichedItems });
+        setSelectedItems([]); // reset selections
       }
     } catch (err) {
       setMessage("Error fetching invoice.");
     }
   };
 
+  // toggle an item with qty
+  const toggleItem = (itemName: string, qty: number, checked: boolean) => {
+    if (checked) {
+      setSelectedItems((prev) => [...prev, { itemName, qty }]);
+    } else {
+      setSelectedItems((prev) => prev.filter((i) => i.itemName !== itemName));
+    }
+  };
+
+  const updateQty = (itemName: string, qty: number) => {
+    setSelectedItems((prev) =>
+      prev.map((i) => (i.itemName === itemName ? { ...i, qty } : i))
+    );
+  };
+
   const handleReturn = async () => {
-    if (!invoiceId || !selectedItem || !qty) {
-      setMessage("Please select an invoice, item and quantity.");
+    if (!invoiceId || selectedItems.length === 0) {
+      setMessage("Please select items and quantities.");
       return;
     }
 
@@ -93,56 +104,28 @@ const ReturnItems = () => {
       const res = await fetch("/api/returns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoiceId, itemName: selectedItem, qty }),
+        body: JSON.stringify({ invoiceId, items: selectedItems }),
       });
+
       const data = await res.json();
       console.log("⚡ API Response:", data);
 
       if (data.success) {
-        setInvoice((prev) => {
-          if (!prev) return prev;
-
-          const updatedItems = prev.items
-            .map((it) => {
-              if (it.originalName === selectedItem) {
-                if (qty >= it.qty) {
-                  return null;
-                } else {
-                  return {
-                    ...it,
-                    qty: it.qty - qty,
-                    amount: it.amount - (it.amount / it.qty) * qty,
-                    totalProfit:
-                      it.totalProfit - (it.totalProfit / it.qty) * qty,
-                    weight: it.weight - (it.weight / it.qty) * qty,
-                  };
-                }
-              }
-              return it;
-            })
-            .filter(Boolean) as InvoiceItem[];
-
-          return {
-            ...prev,
-            items: updatedItems,
-          };
-        });
-
-        let timer: NodeJS.Timeout;
-        if (data.success) {
-          setMessage("✅ Return processed successfully.");
-
-          if (timer) clearTimeout(timer);
-          timer = setTimeout(() => setMessage(""), 1500);
-          setSelectedItem("");
-          setQty(1);
-        }
+        setReturnId(data.returnId || null);
+        setMessage(
+          `✅ Return processed successfully. Return ID: ${data.returnId}`
+        );
+        setInvoice(null);
+        setSelectedItems([]);
+        setInvoiceId("");
       } else {
         setMessage("❌ Error: " + data.message);
+        setReturnId(null);
       }
     } catch (err) {
       console.error("⚡ handleReturn error:", err);
       setMessage("❌ Error happened.");
+      setReturnId(null);
     }
   };
 
@@ -169,45 +152,56 @@ const ReturnItems = () => {
 
       {invoice && (
         <div className="w-full max-w-md bg-gray-800 rounded p-4">
-          <h2 className="font-bold mb-2">Invoice: {invoice.quotationId}</h2>
+          <h2 className="font-bold mb-4">Invoice: {invoice.quotationId}</h2>
 
-          {/* 🔽 Dropdown - now using readable item names */}
-          <select
-            value={selectedItem}
-            onChange={(e) => setSelectedItem(e.target.value)}
-            className="w-full p-2 mb-3 bg-gray-900 border border-gray-600 rounded"
-          >
-            <option value="">Select item to return</option>
-            {invoice.items.map((it) => (
-              <option key={it.originalName} value={it.originalName}>
-                {getDisplayName(it)} (Qty: {it.qty})
-              </option>
-            ))}
-          </select>
-
-          <input
-            type="number"
-            min={1}
-            max={
-              invoice.items.find((it) => it.originalName === selectedItem)
-                ?.qty || 1
-            }
-            value={qty}
-            onChange={(e) => setQty(Number(e.target.value))}
-            className="w-full p-2 mb-3 bg-gray-900 border border-gray-600 rounded"
-            placeholder="Quantity"
-          />
+          {invoice.items.map((it) => {
+            const selected = selectedItems.find(
+              (s) => s.itemName === it.originalName
+            );
+            return (
+              <div
+                key={it.originalName}
+                className="flex items-center gap-3 mb-2"
+              >
+                <input
+                  type="checkbox"
+                  checked={!!selected}
+                  onChange={(e) =>
+                    toggleItem(it.originalName, 1, e.target.checked)
+                  }
+                />
+                <span className="flex-1">
+                  {getDisplayName(it)} (Qty: {it.qty})
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={it.qty}
+                  value={selected?.qty || 1}
+                  disabled={!selected}
+                  onChange={(e) =>
+                    updateQty(it.originalName, Number(e.target.value))
+                  }
+                  className="w-16 bg-gray-900 border border-gray-600 rounded text-center"
+                />
+              </div>
+            );
+          })}
 
           <button
             onClick={handleReturn}
-            className="w-full px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+            className="mt-4 w-full px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
           >
             Process Return
           </button>
         </div>
       )}
 
-      {message && <p className="mt-4">{message}</p>}
+      {message && (
+        <div className="mt-4 text-center">
+          <p>{message}</p>
+        </div>
+      )}
     </div>
   );
 };
