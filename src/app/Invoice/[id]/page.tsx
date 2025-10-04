@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { printInvoicePDF } from "@/utils/printInvoicePDF";
 
 const InvoiceDetails = () => {
   const { id } = useParams();
@@ -74,6 +75,17 @@ const InvoiceDetails = () => {
             className="mb-4 px-4 py-2 bg-white text-black rounded hover:bg-gray-300"
           >
             ← Back
+          </button>
+
+          {/* Print Invoice button */}
+
+          <button
+            onClick={async () => {
+              await printInvoicePDF(invoice.quotationId);
+            }}
+            className="mb-4 ml-3 px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700"
+          >
+            Print Invoice
           </button>
 
           <h1 className="text-2xl font-bold mb-2 text-center text-white">

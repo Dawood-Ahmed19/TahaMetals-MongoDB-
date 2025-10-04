@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { printReturnPDF } from "@/utils/printReturnedPDF";
 
 interface ReturnItem {
   itemName: string;
@@ -86,6 +87,15 @@ export default function ReturnPage({
             className="mb-4 px-4 py-2 bg-white text-black rounded hover:bg-gray-300"
           >
             ← Back
+          </button>
+
+          <button
+            onClick={async () => {
+              await printReturnPDF(returnRecord.returnId);
+            }}
+            className="mb-4 ml-3 px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700"
+          >
+            Print Return
           </button>
 
           <h1 className="text-2xl font-bold mb-2 text-center text-white">
