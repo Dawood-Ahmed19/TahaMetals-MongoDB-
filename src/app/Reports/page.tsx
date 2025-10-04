@@ -20,7 +20,8 @@ const Reports = () => {
   const [year, setYear] = useState(new Date().getFullYear());
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-
+  const [monthlyExpenses, setMonthlyExpenses] = useState(0);
+  const [netMonthlyProfit, setNetMonthlyProfit] = useState(0);
   const today = new Date();
   const formattedDate = today.toLocaleDateString("en-US", {
     weekday: "long",
@@ -49,6 +50,17 @@ const Reports = () => {
         setQuotations(data.quotations || []);
         setCurrentPage(1);
       }
+
+      if (filterType === "monthly") {
+        const expRes = await fetch(
+          `/api/reports/monthly-expenses?month=${month}&year=${year}`
+        );
+        const expData = await expRes.json();
+        if (expData.success) setMonthlyExpenses(expData.totalExpenses);
+        else setMonthlyExpenses(0);
+      } else {
+        setMonthlyExpenses(0);
+      }
     } catch (err) {
       console.error("Error fetching quotations:", err);
     }
@@ -67,6 +79,18 @@ const Reports = () => {
     (sum, q) => sum + (q.quotationTotalProfit || 0),
     0
   );
+
+  useEffect(() => {
+    if (filterType === "monthly") {
+      const totalInvoiceProfit = quotations.reduce(
+        (sum, q) => sum + (q.quotationTotalProfit || 0),
+        0
+      );
+      setNetMonthlyProfit(totalInvoiceProfit - monthlyExpenses);
+    } else {
+      setNetMonthlyProfit(0);
+    }
+  }, [quotations, monthlyExpenses, filterType]);
 
   return (
     <div className="h-full flex flex-col items-center gap-[30px] px-[40px] py-[30px]">
@@ -200,6 +224,34 @@ const Reports = () => {
                       {netProfit.toLocaleString("en-US")} Rs
                     </td>
                   </tr>
+
+                  {filterType === "monthly" && (
+                    <tr className="bg-gray-800 font-bold text-center text-sm">
+                      <td
+                        colSpan={2}
+                        className="border border-gray-700 p-2 text-right pr-4"
+                      >
+                        Net Profit (
+                        {new Date(year, month - 1).toLocaleString("default", {
+                          month: "long",
+                          year: "numeric",
+                        })}
+                        ):
+                      </td>
+                      <td className="border border-gray-700 p-2 text-gray-200">
+                        — {/* empty cell for amount column */}
+                      </td>
+                      <td
+                        className={`border border-gray-700 p-2 ${
+                          netMonthlyProfit >= 0
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {netMonthlyProfit.toLocaleString("en-US")} Rs
+                      </td>
+                    </tr>
+                  )}
                 </>
               ) : (
                 <tr>
