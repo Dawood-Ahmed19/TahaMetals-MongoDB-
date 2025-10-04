@@ -239,7 +239,7 @@ const Reports = () => {
                         ):
                       </td>
                       <td className="border border-gray-700 p-2 text-gray-200">
-                        — {/* empty cell for amount column */}
+                        —
                       </td>
                       <td
                         className={`border border-gray-700 p-2 ${

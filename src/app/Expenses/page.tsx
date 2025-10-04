@@ -268,7 +268,7 @@ export default function ExpensesPage() {
                             }
                             readOnly={!isEditable}
                             disabled={!isEditable}
-                            className="bg-transparent outline-none w-full text-center"
+                            className="bg-transparent outline-none w-full text-center text-white"
                           />
                         </td>
                         <td className="py-3 px-2">
