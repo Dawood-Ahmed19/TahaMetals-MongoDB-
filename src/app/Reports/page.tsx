@@ -1,5 +1,6 @@
 "use client";
 
+import { printMonthlyReport } from "@/utils/printReports";
 import { useEffect, useState } from "react";
 
 interface Quotation {
@@ -172,6 +173,34 @@ const Reports = () => {
         >
           Apply Filter
         </button>
+        {filterType === "monthly" && quotations.length > 0 && (
+          <div className="flex justify-end mt-4">
+            <button
+              onClick={() =>
+                printMonthlyReport(
+                  month,
+                  year,
+                  quotations.map((q) => ({
+                    date: q.date,
+                    quotationId: q.quotationId,
+                    grandTotal: q.grandTotal,
+                    profit: q.quotationTotalProfit || 0,
+                  })),
+                  quotations.reduce((s, q) => s + q.grandTotal, 0),
+                  quotations.reduce(
+                    (s, q) => s + (q.quotationTotalProfit || 0),
+                    0
+                  ),
+                  netMonthlyProfit,
+                  monthlyExpenses
+                )
+              }
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium"
+            >
+              Print Report
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Table */}
