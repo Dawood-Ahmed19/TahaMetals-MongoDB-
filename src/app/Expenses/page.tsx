@@ -1,5 +1,6 @@
 "use client";
 
+import { printExpenseSheet } from "@/utils/printExpenseSheet";
 import { useEffect, useState } from "react";
 
 interface ExpenseEntry {
@@ -316,6 +317,14 @@ export default function ExpensesPage() {
               >
                 + Add Row
               </button>
+              {!isEditable && (
+                <button
+                  onClick={() => printExpenseSheet(currentMonth!)}
+                  className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-md font-medium"
+                >
+                  Print Sheet
+                </button>
+              )}
               <p className="text-lg font-semibold">
                 Total:{" "}
                 <span className="text-yellow-400">
