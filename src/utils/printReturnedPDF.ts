@@ -65,7 +65,6 @@ export const printReturnPDF = async (returnId: string) => {
     doc.setFontSize(11).setFont("helvetica", "normal");
     doc.text("Return Invoice / Credit Note", brandX, brandY + 18);
 
-    // Header info: date, return ID, ref invoice
     const pageWidth = doc.internal.pageSize.getWidth();
     const rightX = pageWidth - 50;
     const today = new Date(rtn.createdAt).toLocaleDateString();
@@ -85,7 +84,6 @@ export const printReturnPDF = async (returnId: string) => {
     );
     doc.setTextColor(0, 0, 0);
 
-    // Table
     const head = [["Qty", "Item", "Weight", "Rate", "Refund"]];
     const body = items.map((it) => [
       String(it.qty),

@@ -12,6 +12,8 @@ const sideBarItems = [
   { name: "Reports", path: "/Reports" },
   { name: "Return items", path: "/Returned" },
   { name: "Rate list", path: "/Ratelist" },
+  { name: "Expenses", path: "/Expenses" },
+  { name: "Settings", path: "/Settings" },
 ];
 
 export default function Sidebar() {
