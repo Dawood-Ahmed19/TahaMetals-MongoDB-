@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { generateInvoicePDF } from "@/utils/generateInvoicePDF";
 import Select from "react-select";
+import { printInvoicePDF } from "@/utils/printInvoicePDF";
 
 type QuotationRow = {
   qty: number | "";
@@ -782,6 +783,20 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
           className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-white"
         >
           New Invoice
+        </button>
+
+        {/* Print Invoice */}
+        <button
+          onClick={async () => {
+            if (!quotationId) {
+              alert("Please save the invoice before printing.");
+              return;
+            }
+            await printInvoicePDF(quotationId);
+          }}
+          className="bg-pink-600 hover:bg-pink-700 px-4 py-2 rounded text-white"
+        >
+          Print Invoice
         </button>
 
         <button
