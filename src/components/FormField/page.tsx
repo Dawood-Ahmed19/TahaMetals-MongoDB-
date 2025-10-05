@@ -27,7 +27,7 @@ function FormField({
           onChange={(e) => onChange?.(e.target.value)}
           style={{
             fontSize,
-            maxHeight: "180px",
+            maxHeight: "100px",
             overflowY: "auto",
           }}
           size={1}

@@ -20,6 +20,8 @@ const BandSizeOptions = [
   '4"',
 ];
 
+const GlassCutterSize = [`14mm`];
+
 const DiskSizeOptions = [`4"`, `5"`];
 const DiskAdditionalSizeOptions = [`14"`];
 
@@ -120,6 +122,7 @@ const HardwareItemNameOptions = [
   "Disk Regmar",
   "Disk G.P",
   "Disk Cutting",
+  "Glass Cutter",
 ];
 
 const PlateSizeRoundOptions = [
@@ -277,6 +280,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     formData.itemType === "Hardware" && formData.itemName === "Disk G.P";
   const isHardwareDiskCutting =
     formData.itemType === "Hardware" && formData.itemName === "Disk Cutting";
+  const isHardwareGlassCutter =
+    formData.itemType === "Hardware" && formData.itemName === "Glass Cutter";
 
   // ================= Handle submit =====================
 
@@ -320,6 +325,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       formData.itemType === "Hardware" && formData.itemName === "Disk G.P";
     const isHardwareDiskCutting =
       formData.itemType === "Hardware" && formData.itemName === "Disk Cutting";
+    const isHardwareGlassCutter =
+      formData.itemType === "Hardware" && formData.itemName === "Glass Cutter";
 
     // Validation
     if (
@@ -383,7 +390,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       isHardwareDiskWhite ||
       isHardwareDiskRegmar ||
       isHardwareDiskGp ||
-      isHardwareDiskCutting
+      isHardwareDiskCutting ||
+      isHardwareGlassCutter
     ) {
       newItem.pricePerUnit = Number(formData.price);
     } else {
@@ -561,6 +569,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
         ? [...DiskSizeOptions]
         : isHardwareDiskCutting
         ? [...DiskSizeOptions, ...DiskAdditionalSizeOptions]
+        : isHardwareGlassCutter
+        ? [...GlassCutterSize]
         : formData.pipeType === "Round"
         ? RoundItemSizeOptions
         : SquareItemSizeOptions,
@@ -658,7 +668,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     isHardwareDiskWhite ||
     isHardwareDiskRegmar ||
     isHardwareDiskGp ||
-    isHardwareDiskCutting
+    isHardwareDiskCutting ||
+    isHardwareGlassCutter
       ? [
           {
             label: "Price Per Unit (PKR)",
