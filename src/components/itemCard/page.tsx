@@ -32,6 +32,8 @@ const stopperRoundSize = [
   `2"`,
 ];
 
+const ChinaBallSizeOptions = [`2"`, `2 - 1/2"`, `3"`];
+
 const stopperSquareSize = [
   `1/2" x 1/2"`,
   `1" x 2"`,
@@ -104,6 +106,7 @@ const HardwareItemNameOptions = [
   "Gote",
   "Ring",
   "VIP Ball",
+  "China Ball",
   "Stopper",
   "Star",
   "Chutkni",
@@ -253,6 +256,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
   const isHardwareBolt =
     formData.itemType === "Hardware" &&
     formData.itemName === "Rawal Bolt CC 13mm";
+  const isHardwareChinaBall =
+    formData.itemType === "Hardware" && formData.itemName === "China Ball";
 
   // ================= Handle submit =====================
 
@@ -284,6 +289,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     const isHardwareBolt =
       formData.itemType === "Hardware" &&
       formData.itemName === "Rawal Bolt CC 13mm";
+    const isHardwareChinaBall =
+      formData.itemType === "Hardware" && formData.itemName === "China Ball";
 
     // Validation
     if (
@@ -341,7 +348,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       isHardwareStar ||
       isHardwareBalls ||
       isHardwareChutkni ||
-      isHardwareBolt
+      isHardwareBolt ||
+      isHardwareChinaBall
     ) {
       newItem.pricePerUnit = Number(formData.price);
     } else {
@@ -504,6 +512,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
           : []
         : isHardwareRing
         ? [...RingSize]
+        : isHardwareChinaBall
+        ? [...ChinaBallSizeOptions]
         : isHardwareStar
         ? [...StarSize]
         : isHardwareBalls
@@ -520,7 +530,7 @@ export default function ItemCard({ initialData }: ItemCardProps) {
         setFormData((prev) => ({ ...prev, itemSize: value })),
     },
 
-    ...(isHardwareCuttBall
+    ...(isHardwareCuttBall || isHardwareBalls || isHardwareChinaBall
       ? [
           {
             label: "Color",
@@ -601,7 +611,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     isHardwareStar ||
     isHardwareBalls ||
     isHardwareChutkni ||
-    isHardwareBolt
+    isHardwareBolt ||
+    isHardwareChinaBall
       ? [
           {
             label: "Price Per Unit (PKR)",

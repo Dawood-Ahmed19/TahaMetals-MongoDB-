@@ -169,8 +169,22 @@ export default function InventoryItem({
         <button
           type="button"
           onClick={() => onDelete(_id)}
-          className="hover:cursor-pointer"
-          disabled={quantity === 0}
+          className={`hover:cursor-pointer ${
+            quantity === 0 &&
+            !(
+              type?.toLowerCase() === "hardware" &&
+              name?.toLowerCase() === "plate"
+            )
+              ? "opacity-50 cursor-not-allowed"
+              : ""
+          }`}
+          disabled={
+            quantity === 0 &&
+            !(
+              type?.toLowerCase() === "hardware" &&
+              name?.toLowerCase() === "plate"
+            )
+          }
         >
           <FontAwesomeIcon icon={faTrash} />
         </button>
