@@ -68,17 +68,24 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* 2️⃣  unifies background + text */
-input[type="date"],
-input[type="date"]::-webkit-datetime-edit,
-input[type="date"]::-webkit-datetime-edit-text,
-input[type="date"]::-webkit-datetime-edit-month-field,
-input[type="date"]::-webkit-datetime-edit-day-field,
-input[type="date"]::-webkit-datetime-edit-year-field {
+/* only affect dark backgrounds */
+.dark-mode input[type="date"],
+.dark-mode input[type="date"]::-webkit-datetime-edit,
+.dark-mode input[type="date"]::-webkit-datetime-edit-text,
+.dark-mode input[type="date"]::-webkit-datetime-edit-month-field,
+.dark-mode input[type="date"]::-webkit-datetime-edit-day-field,
+.dark-mode input[type="date"]::-webkit-datetime-edit-year-field {
   color: #ffffff;
   background-color: transparent;
 }
 
-/* 3️⃣  basic normalization for Firefox */
-input[type="date"] {
-  color-scheme: light;
+/* override for light modals (white backgrounds) */
+.light-mode input[type="date"],
+.light-mode input[type="date"]::-webkit-datetime-edit,
+.light-mode input[type="date"]::-webkit-datetime-edit-text,
+.light-mode input[type="date"]::-webkit-datetime-edit-month-field,
+.light-mode input[type="date"]::-webkit-datetime-edit-day-field,
+.light-mode input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #000000;
+  background-color: transparent;
 }

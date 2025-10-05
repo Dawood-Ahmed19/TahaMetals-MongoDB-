@@ -312,7 +312,7 @@ const ShowInvoices = () => {
                 onChange={(e) =>
                   setNewPayment({ ...newPayment, date: e.target.value })
                 }
-                className="border p-2 text-sm"
+                className="border p-2 text-sm text-gray-900 [color-scheme:light]"
               />
               {errorMessage && (
                 <p className="text-red-500 text-sm">{errorMessage}</p>
