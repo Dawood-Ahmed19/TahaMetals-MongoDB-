@@ -95,28 +95,28 @@ export default function InventoryCard() {
           <option value="Pillars">Pillars</option>
         </select>
       </span>
+      <span
+        className={`${inventoryGridCols} px-[30px] xl-only:px-[80px] py-[20px] bg-fieldBg border-b rounded-t-sm border-gray-600 
+          text-white text-xs xl-only:text-[14px]`}
+      >
+        <p>Item name</p>
+        <p>Item type</p>
+        <p>Size</p>
+        <p>Color</p>
+        <p>Gauge</p>
+        <p>Gote</p>
+        <p>Height (FT)</p>
+        <p>Weight (KG)</p>
+        <p>Quantity Available</p>
+        <p>Price Per KG</p>
+        <p>Price Per Unit</p>
+        <p>Amount</p>
+        <p>Actions</p>
+        <p>Date</p>
+      </span>
 
       <span className="max-h-[800px] overflow-y-auto">
         {/* Header row */}
-        <span
-          className={`${inventoryGridCols} px-[30px] xl-only:px-[80px] py-[20px] bg-fieldBg border-b rounded-t-sm border-gray-600 
-          text-white text-xs xl-only:text-[14px]`}
-        >
-          <p>Item name</p>
-          <p>Item type</p>
-          <p>Size</p>
-          <p>Color</p>
-          <p>Gauge</p>
-          <p>Gote</p>
-          <p>Height (FT)</p>
-          <p>Weight (KG)</p>
-          <p>Quantity Available</p>
-          <p>Price Per KG</p>
-          <p>Price Per Unit</p>
-          <p>Amount</p>
-          <p>Actions</p>
-          <p>Date</p>
-        </span>
 
         {/* Data rows */}
         {items.map((item) => {

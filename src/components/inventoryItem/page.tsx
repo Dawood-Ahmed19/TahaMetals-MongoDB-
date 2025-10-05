@@ -84,14 +84,26 @@ export default function InventoryItem({
     type?.toLowerCase() === "hardware" && name?.toLowerCase() === "band";
 
   const numericUnitPrice = Number(unitPrice) || 0;
-  const computedAmount = quantity * numericUnitPrice;
+  const numericPricePerKg = Number(pricePerKg) || 0;
+  const numericQuantity = Number(quantity) || 0;
+  const numericWeight = Number(weight) || 0;
+
+  const computedAmount =
+    numericQuantity > 0
+      ? numericQuantity * numericUnitPrice
+      : numericWeight * numericPricePerKg;
 
   return (
     <div
       className={`${inventoryGridCols}
       px-[30px] xl-only:px-[80px] py-[20px] border-b border-gray-800
       text-xs items-center
-      ${quantity === 0 ? "bg-gray-700 text-gray-400" : "bg-fieldBg text-white"}
+      ${
+        quantity === 0 &&
+        !(type?.toLowerCase() === "hardware" && name?.toLowerCase() === "plate")
+          ? "bg-gray-700 text-gray-400"
+          : "bg-fieldBg text-white"
+      }
       xl-only:px-[50px] xl-only:py-[15px] xl-only:text-[14px]`}
     >
       <p>{renderValue(name, undefined, false)}</p>
@@ -111,7 +123,10 @@ export default function InventoryItem({
       </p>
 
       <p>
-        {quantity === 0 ? (
+        {type?.toLowerCase() === "hardware" &&
+        name?.toLowerCase() === "plate" ? (
+          <span className="text-gray-400 font-semibold">N/A</span>
+        ) : quantity === 0 ? (
           <span className="text-red-500 font-semibold">Out of Stock</span>
         ) : (
           renderValue(quantity)
@@ -132,9 +147,21 @@ export default function InventoryItem({
       <div className="flex gap-2">
         <button
           onClick={handleEditItem}
-          disabled={quantity === 0}
+          disabled={
+            quantity === 0 &&
+            !(
+              type?.toLowerCase() === "hardware" &&
+              name?.toLowerCase() === "plate"
+            )
+          }
           className={`hover:cursor-pointer ${
-            quantity === 0 ? "opacity-50 cursor-not-allowed" : ""
+            quantity === 0 &&
+            !(
+              type?.toLowerCase() === "hardware" &&
+              name?.toLowerCase() === "plate"
+            )
+              ? "opacity-50 cursor-not-allowed"
+              : ""
           }`}
         >
           <FontAwesomeIcon icon={faPen} />

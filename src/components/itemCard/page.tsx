@@ -263,7 +263,6 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     const isPillars = formData.itemType === "Pillars";
     const isHardware = formData.itemType === "Hardware";
 
-    // ✅ Specific hardware types
     const isHardwareBand =
       isHardware && formData.itemName?.toLowerCase() === "band";
     const isHardwareCuttBall =
@@ -286,7 +285,7 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       formData.itemType === "Hardware" &&
       formData.itemName === "Rawal Bolt CC 13mm";
 
-    // ✅ Validation
+    // Validation
     if (
       !formData.itemType ||
       (isPipe && !formData.pipeType) ||
@@ -294,12 +293,14 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       (isHardware && !formData.itemName) ||
       ((isHardwarePlate || isHardwareBasecup || isHardwareStopper) &&
         !formData.pipeType) ||
-      // itemSize is required unless: Pillars + Fancy
       ((formData.itemType === "Pillars" && formData.pipeType === "Fancy") ||
       isHardwareBolt
         ? false
         : !formData.itemSize) ||
-      !formData.stock ||
+      (formData.itemType === "Hardware" &&
+      formData.itemName?.toLowerCase() === "plate"
+        ? false
+        : !formData.stock) ||
       !formData.price ||
       (isPillars
         ? formData.pipeType === "Fancy"
@@ -630,6 +631,9 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     {
       label: "Total Stock",
       value: formData.stock,
+      hidden:
+        formData.itemType === "Hardware" &&
+        formData.itemName?.toLowerCase() === "plate",
       placeholder: "Total Stock value here",
       onChange: (value: string) =>
         setFormData((prev) => ({ ...prev, stock: value })),
