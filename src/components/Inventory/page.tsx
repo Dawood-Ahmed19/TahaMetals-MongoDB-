@@ -18,6 +18,7 @@ export interface Item {
   pricePerKg?: number;
   pricePerUnit?: number;
   date: string;
+  amount: number;
 }
 
 export default function InventoryCard() {
@@ -112,6 +113,7 @@ export default function InventoryCard() {
           <p>Quantity Available</p>
           <p>Price Per KG</p>
           <p>Price Per Unit</p>
+          <p>Amount</p>
           <p>Actions</p>
           <p>Date</p>
         </span>

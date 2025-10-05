@@ -10,7 +10,7 @@ interface ExpenseEntry {
 }
 
 export default function ExpensesPage() {
-  const now = new Date();
+  const now = new Date(2025, 11, 2);
   const [startDay, setStartDay] = useState<number | null>(null);
   const [endDay, setEndDay] = useState<number | null>(null);
   const [settingsLoaded, setSettingsLoaded] = useState(false);

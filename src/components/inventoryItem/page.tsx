@@ -18,6 +18,7 @@ interface InventoryItemsProps {
   quantity: number;
   pricePerKg?: number | string | null;
   unitPrice?: number | string | null;
+  amount: number;
   date: string;
   onDelete: (id: string) => void;
 }
@@ -82,6 +83,9 @@ export default function InventoryItem({
   const isBand =
     type?.toLowerCase() === "hardware" && name?.toLowerCase() === "band";
 
+  const numericUnitPrice = Number(unitPrice) || 0;
+  const computedAmount = quantity * numericUnitPrice;
+
   return (
     <div
       className={`${inventoryGridCols}
@@ -119,6 +123,12 @@ export default function InventoryItem({
           : renderValue(pricePerKg, "PKR", true)}
       </p>
       <p>{renderValue(unitPrice, "PKR", true)}</p>
+      <p>
+        {computedAmount.toLocaleString("en-US", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        })}
+      </p>
       <div className="flex gap-2">
         <button
           onClick={handleEditItem}
