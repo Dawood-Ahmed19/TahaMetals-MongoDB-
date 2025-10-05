@@ -20,11 +20,15 @@ const BandSizeOptions = [
   '4"',
 ];
 
+const DiskSizeOptions = [`4"`, `5"`];
+const DiskAdditionalSizeOptions = [`14"`];
+
 const stopperRoundSize = [
   `1/2" Gol`,
   `1/2" minar`,
   `1/2" steel`,
   `1/2" china`,
+  `1" steel`,
   `5/8"`,
   `3/4"`,
   `1 - 1/4"`,
@@ -48,7 +52,7 @@ const stopperSquareSize = [
 ];
 
 const RingSize = [`2"`, `3"`];
-const StarSize = [`2"`, `3"`, `4"`];
+const StarSize = [`2"`, `3"`, `4"`, `3" kingri`];
 const ChutkniSize = [`4"`, `6"`, `8"`];
 
 const CuttBallSizeOptions = [
@@ -69,7 +73,7 @@ const SquareItemSizeOptions = [
   '1" x 1"',
 ];
 
-const VipBallsSize = [`3"`, `2 - 1/2"`, `2"`, `1 - 1/2"`, `1"`];
+const VipBallsSize = [`3"`, `2 - 1/2"`, `2"`, `1 - 1/2"`, `1"`, `3" x 3"`];
 
 const AdditionalSquareItemSizePillars = [`1" x 1 - 1/2"`, `1" x 2"`];
 
@@ -111,6 +115,11 @@ const HardwareItemNameOptions = [
   "Star",
   "Chutkni",
   "Rawal Bolt CC 13mm",
+  "Disk Red",
+  "Disk White",
+  "Disk Regmar",
+  "Disk G.P",
+  "Disk Cutting",
 ];
 
 const PlateSizeRoundOptions = [
@@ -258,6 +267,16 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     formData.itemName === "Rawal Bolt CC 13mm";
   const isHardwareChinaBall =
     formData.itemType === "Hardware" && formData.itemName === "China Ball";
+  const isHardwareDiskRed =
+    formData.itemType === "Hardware" && formData.itemName === "Disk Red";
+  const isHardwareDiskWhite =
+    formData.itemType === "Hardware" && formData.itemName === "Disk White";
+  const isHardwareDiskRegmar =
+    formData.itemType === "Hardware" && formData.itemName === "Disk Regmar";
+  const isHardwareDiskGp =
+    formData.itemType === "Hardware" && formData.itemName === "Disk G.P";
+  const isHardwareDiskCutting =
+    formData.itemType === "Hardware" && formData.itemName === "Disk Cutting";
 
   // ================= Handle submit =====================
 
@@ -291,6 +310,16 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       formData.itemName === "Rawal Bolt CC 13mm";
     const isHardwareChinaBall =
       formData.itemType === "Hardware" && formData.itemName === "China Ball";
+    const isHardwareDiskRed =
+      formData.itemType === "Hardware" && formData.itemName === "Disk Red";
+    const isHardwareDiskWhite =
+      formData.itemType === "Hardware" && formData.itemName === "Disk White";
+    const isHardwareDiskRegmar =
+      formData.itemType === "Hardware" && formData.itemName === "Disk Regmar";
+    const isHardwareDiskGp =
+      formData.itemType === "Hardware" && formData.itemName === "Disk G.P";
+    const isHardwareDiskCutting =
+      formData.itemType === "Hardware" && formData.itemName === "Disk Cutting";
 
     // Validation
     if (
@@ -349,7 +378,12 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       isHardwareBalls ||
       isHardwareChutkni ||
       isHardwareBolt ||
-      isHardwareChinaBall
+      isHardwareChinaBall ||
+      isHardwareDiskRed ||
+      isHardwareDiskWhite ||
+      isHardwareDiskRegmar ||
+      isHardwareDiskGp ||
+      isHardwareDiskCutting
     ) {
       newItem.pricePerUnit = Number(formData.price);
     } else {
@@ -520,6 +554,13 @@ export default function ItemCard({ initialData }: ItemCardProps) {
         ? [...VipBallsSize]
         : isHardwareChutkni
         ? [...ChutkniSize]
+        : isHardwareDiskRed ||
+          isHardwareDiskWhite ||
+          isHardwareDiskRegmar ||
+          isHardwareDiskGp
+        ? [...DiskSizeOptions]
+        : isHardwareDiskCutting
+        ? [...DiskSizeOptions, ...DiskAdditionalSizeOptions]
         : formData.pipeType === "Round"
         ? RoundItemSizeOptions
         : SquareItemSizeOptions,
@@ -612,7 +653,12 @@ export default function ItemCard({ initialData }: ItemCardProps) {
     isHardwareBalls ||
     isHardwareChutkni ||
     isHardwareBolt ||
-    isHardwareChinaBall
+    isHardwareChinaBall ||
+    isHardwareDiskRed ||
+    isHardwareDiskWhite ||
+    isHardwareDiskRegmar ||
+    isHardwareDiskGp ||
+    isHardwareDiskCutting
       ? [
           {
             label: "Price Per Unit (PKR)",
