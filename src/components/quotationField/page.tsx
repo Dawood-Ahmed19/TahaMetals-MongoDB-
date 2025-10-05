@@ -192,112 +192,6 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   const balance = grandTotal - received;
   const isReceivedValid = received <= grandTotal;
 
-  // const handleChange = (
-  //   index: number,
-  //   field: keyof QuotationRow,
-  //   value: any
-  // ) => {
-  //   const newRows = [...rows];
-  //   let numValue = Number(value);
-  //   if (isNaN(numValue) || numValue < 0) numValue = 0;
-
-  //   if (field === "item") {
-  //     const [name, size, guage] = (value ?? "").split("|");
-
-  //     const selected = inventoryItems.find(
-  //       (inv) =>
-  //         inv.name === name &&
-  //         (size === "" || inv.size?.toString() === size) &&
-  //         (guage === "" || inv.guage?.toString() === guage)
-  //     );
-
-  //     if (selected) {
-  //       let displayItem = "";
-  //       if (selected.type.toLowerCase().includes("pillar")) {
-  //         displayItem = `${selected.type} ${selected.size || ""} ${
-  //           selected.gote &&
-  //           selected.gote.trim() !== "" &&
-  //           selected.gote.toLowerCase() !== "without gote"
-  //             ? selected.gote
-  //             : ""
-  //         } - ${selected.guage || ""}`.trim();
-  //       } else if (selected.type.toLowerCase() === "hardware") {
-  //         displayItem = `${selected.name} ${
-  //           selected.size ? selected.size : ""
-  //         }${
-  //           selected.color && selected.color.trim() !== "" ? selected.color : ""
-  //         }`;
-  //       } else {
-  //         displayItem = `${selected.type} ${selected.size || ""}`.trim();
-  //       }
-
-  //       const qty =
-  //         newRows[index].qty && newRows[index].qty > 0 ? newRows[index].qty : 1;
-
-  //       const key = `${selected.name.toLowerCase()}|${selected.size ?? ""}|${
-  //         selected.guage ?? ""
-  //       }`;
-  //       const rawRate = rateList[key]?.ratePerUnit || 0;
-  //       const rateFromList = Number(rawRate) || 0;
-
-  //       // calculate weight for reference
-  //       let weight = 0;
-  //       if (
-  //         !(
-  //           selected.type.toLowerCase() === "hardware" ||
-  //           selected.type.toLowerCase().includes("pillar")
-  //         )
-  //       ) {
-  //         const singleWeight = selected.quantity
-  //           ? (selected.weight ?? 0) / selected.quantity
-  //           : 0;
-  //         weight = singleWeight * qty;
-  //       }
-
-  //       newRows[index] = {
-  //         ...newRows[index],
-  //         item: displayItem,
-  //         originalName: selected.name,
-  //         size: selected.size?.toString() || "",
-  //         qty,
-  //         weight,
-  //         rate: rateFromList,
-  //         guage: selected.guage?.toString() || "",
-  //         gote: selected.gote?.toString() || "",
-  //       };
-  //     }
-  //   } else if (field === "qty") {
-  //     const currentItem = newRows[index].originalName;
-  //     const currentSize = newRows[index].size;
-  //     const currentGuage = newRows[index].guage;
-
-  //     const inventoryItem = inventoryItems.find(
-  //       (inv) =>
-  //         inv.name === currentItem &&
-  //         (currentSize === "" || inv.size?.toString() === currentSize) &&
-  //         (currentGuage === "" || inv.guage?.toString() === currentGuage)
-  //     );
-
-  //     if (inventoryItem && numValue > inventoryItem.quantity) {
-  //       showMessage(`⚠️ Only ${inventoryItem.quantity} in stock.`, 2500);
-  //       return;
-  //     }
-
-  //     newRows[index].qty = numValue;
-  //   } else if (field === "rate") {
-  //     numValue = Math.round(numValue);
-  //     newRows[index].rate = numValue;
-  //   } else {
-  //     newRows[index] = { ...newRows[index], [field]: numValue };
-  //   }
-
-  //   const qty = Number(newRows[index].qty) || 0;
-  //   const rate = Number(newRows[index].rate) || 0;
-  //   newRows[index].amount = Math.round(qty * rate);
-
-  //   setRows(newRows);
-  // };
-
   const handleChange = (
     index: number,
     field: keyof QuotationRow,
@@ -307,7 +201,6 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     let numValue = Number(value);
     if (isNaN(numValue) || numValue < 0) numValue = 0;
 
-    // 🧭 When user selects an ITEM from dropdown
     if (field === "item") {
       const [name, size, guage] = (value ?? "").split("|");
 
@@ -471,10 +364,15 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   };
 
   const saveQuotation = async () => {
-    const validRows = rows.filter((r) => r.item && r.qty && r.rate);
+    const validRows = rows.filter(
+      (r) =>
+        r.item &&
+        r.rate &&
+        (Number(r.qty) > 0 ||
+          (r.originalName?.toLowerCase() === "plate" && Number(r.weight) > 0))
+    );
     console.log("💡 saveQuotation called", { validRows, quotationId, rows });
 
-    // 🟢 CASE 1: has an ID but no valid rows => auto delete
     if (quotationId && validRows.length === 0) {
       try {
         console.log("🗑️ Auto-deleting empty invoice:", quotationId);

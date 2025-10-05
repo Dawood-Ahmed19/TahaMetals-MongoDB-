@@ -23,11 +23,11 @@ function FormField({
       {type === "select" ? (
         <select
           value={value}
-          className="w-full bg-[#181B28] text-white py-[15px] px-[24px] rounded focus:outline-none"
+          className="w-full bg-[#181B28] text-white py-[12px] px-[20px] rounded focus:outline-none cursor-pointer"
           onChange={(e) => onChange?.(e.target.value)}
           style={{
             fontSize,
-            maxHeight: "100px",
+            maxHeight: "180px",
             overflowY: "auto",
           }}
           size={1}

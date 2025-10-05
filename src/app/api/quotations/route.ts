@@ -58,15 +58,31 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
+      const isPlate =
+        inventoryItem.type?.toLowerCase() === "hardware" &&
+        inventoryItem.name?.toLowerCase() === "plate";
 
-      if (Number(qty) > Number(inventoryItem.quantity)) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `❌ Not enough stock for "${item}". Available: ${inventoryItem.quantity}, Requested: ${qty}`,
-          },
-          { status: 400 }
-        );
+      if (!isPlate) {
+        if (Number(qty) > Number(inventoryItem.quantity)) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `❌ Not enough stock for "${item}". Available: ${inventoryItem.quantity}, Requested: ${qty}`,
+            },
+            { status: 400 }
+          );
+        }
+      } else {
+        // Plate is sold by weight (kg)
+        if (Number(weight) > Number(inventoryItem.weight)) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `❌ Not enough weight for "${item}". Available: ${inventoryItem.weight} kg, Requested: ${weight} kg`,
+            },
+            { status: 400 }
+          );
+        }
       }
 
       const costPerUnit = Number(inventoryItem.pricePerUnit);
