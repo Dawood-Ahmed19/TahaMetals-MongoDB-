@@ -22,6 +22,7 @@ interface Quotation {
   quotationTotalProfit?: number;
   status?: string;
   loading?: number;
+  customerName?: string;
 }
 
 export async function POST(req: Request) {
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
       payments,
       loading,
       quotationId,
+      customerName,
     } = await req.json();
 
     const client = await clientPromise;
@@ -141,6 +143,7 @@ export async function POST(req: Request) {
               totalReceived,
               balance,
               status: "active",
+              ...(customerName ? { customerName } : {}),
             },
           }
         );
@@ -181,6 +184,7 @@ export async function POST(req: Request) {
       quotationTotalProfit,
       loading: Number(loading) || 0,
       status: "active",
+      ...(customerName ? { customerName } : {}),
     });
 
     return NextResponse.json({

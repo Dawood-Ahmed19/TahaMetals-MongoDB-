@@ -88,6 +88,12 @@ const InvoiceDetails = () => {
             Print Invoice
           </button>
 
+          {invoice.customerName && (
+            <p className="text-center text-white text-lg font-semibold mb-2">
+              Customer: {invoice.customerName}
+            </p>
+          )}
+
           <h1 className="text-2xl font-bold mb-2 text-center text-white">
             Invoice {invoice.quotationId}
           </h1>

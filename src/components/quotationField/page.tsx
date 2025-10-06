@@ -54,7 +54,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
   const [mounted, setMounted] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const messageTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const [isValid, setIsValid] = useState(false);
+  const [customerName, setCustomerName] = useState<string>("");
 
   const showMessage = (text: string, duration = 1500) => {
     setMessage(text);
@@ -78,6 +78,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       setReceived(parsed.received || 0);
       setLoading(parsed.loading || 0);
       setQuotationId(parsed.quotationId || "");
+      setCustomerName(parsed.customerName || "");
     } else {
       setRows([
         {
@@ -100,7 +101,14 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
     if (!mounted) return;
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ rows, discount, received, loading, quotationId })
+      JSON.stringify({
+        rows,
+        discount,
+        received,
+        loading,
+        quotationId,
+        customerName,
+      })
     );
   }, [rows, discount, received, loading, quotationId, mounted]);
 
@@ -425,7 +433,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       return;
     }
 
-    // 🟢 CASE 2: brand new (no ID) but still empty → stop immediately
+    //  CASE 2: brand new (no ID) but still empty → stop immediately
     if (!quotationId && validRows.length === 0) {
       console.warn("⚠️ Attempted save with no rows and no invoice ID.");
       setMessage("⚠️ Please add at least one item before saving.");
@@ -433,7 +441,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       return;
     }
 
-    // 🟢 CASE 3: normal save/update
+    //  CASE 3: normal save/update
     try {
       console.log("💾 Saving invoice", {
         quotationId,
@@ -448,6 +456,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           quotationId: quotationId || undefined,
+          customerName: customerName || null,
           items: validRows.map((row) => ({
             ...row,
             item: row.item,
@@ -541,6 +550,16 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
 
   return (
     <>
+      <div className="mb-3 text-white flex justify-between w-full max-w-[600px]">
+        <label className="font-bold mr-2">Customer Name:</label>
+        <input
+          type="text"
+          value={customerName}
+          onChange={(e) => setCustomerName(e.target.value)}
+          placeholder="Enter customer name (optional)"
+          className="bg-transparent border-b border-gray-500 focus:border-blue-400 outline-none flex-1 text-center text-white"
+        />
+      </div>
       <div
         id="invoice-section"
         className="flex justify-center items-start w-full max-w-[600px] bg-gray-900 overflow-auto text-xs"

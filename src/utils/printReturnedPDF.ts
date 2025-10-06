@@ -16,6 +16,7 @@ interface ReturnRecord {
   createdAt: string;
   itemReturned?: ReturnItem | ReturnItem[];
   itemsReturned?: ReturnItem[];
+  customerName?: string;
 }
 
 export const printReturnPDF = async (returnId: string) => {
@@ -125,7 +126,15 @@ export const printReturnPDF = async (returnId: string) => {
     );
     doc.setTextColor(0, 0, 0);
 
-    // 📦 Table setup
+    // Customer name if any
+    if (rtn.customerName) {
+      doc
+        .setFontSize(9)
+        .setFont("helvetica", "bold")
+        .text(`Customer: ${rtn.customerName}`, brandX, brandY + 40);
+    }
+
+    //  Table setup
     const head = [["Qty", "Item", "Weight", "Rate", "Refund"]];
     const body = items.map((it) => [
       String(it.qty),

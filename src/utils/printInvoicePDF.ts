@@ -112,6 +112,17 @@ export const printInvoicePDF = async (quotationId: string) => {
       doc.setTextColor(0, 0, 0);
     }
 
+    if ((quotation as any).customerName) {
+      doc
+        .setFontSize(9)
+        .setFont("helvetica", "bold")
+        .text(
+          `Customer: ${(quotation as any).customerName}`,
+          brandX,
+          brandY + 35
+        );
+    }
+
     // Table structure
     const head = [["Qty", "Item", "Guage", "Weight", "Rate", "Amount"]];
     const body = items.map((r: any) => [

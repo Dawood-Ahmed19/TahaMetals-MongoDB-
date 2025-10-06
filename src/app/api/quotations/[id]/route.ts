@@ -3,6 +3,44 @@ import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
 
 // -------- GET Single Invoice ----------
+// export async function GET(
+//   req: Request,
+//   context: { params: Promise<{ id: string }> }
+// ) {
+//   try {
+//     const { id } = await context.params;
+
+//     const client = await clientPromise;
+//     const db = client.db("TahaMetals");
+//     const quotations = db.collection("quotations");
+
+//     let query: any = {};
+
+//     if (ObjectId.isValid(id)) {
+//       query = { _id: new ObjectId(id) };
+//     } else {
+//       query = { quotationId: id };
+//     }
+
+//     const quotation = await quotations.findOne(query);
+
+//     if (!quotation) {
+//       return NextResponse.json(
+//         { success: false, message: "Quotation not found" },
+//         { status: 404 }
+//       );
+//     }
+
+//     return NextResponse.json({ success: true, quotation }, { status: 200 });
+//   } catch (error) {
+//     console.error("Error fetching quotation:", error);
+//     return NextResponse.json(
+//       { success: false, message: "Server error" },
+//       { status: 500 }
+//     );
+//   }
+// }
+
 export async function GET(
   req: Request,
   context: { params: Promise<{ id: string }> }
@@ -14,13 +52,9 @@ export async function GET(
     const db = client.db("TahaMetals");
     const quotations = db.collection("quotations");
 
-    let query: any = {};
-
-    if (ObjectId.isValid(id)) {
-      query = { _id: new ObjectId(id) };
-    } else {
-      query = { quotationId: id };
-    }
+    const query = ObjectId.isValid(id)
+      ? { _id: new ObjectId(id) }
+      : { quotationId: id };
 
     const quotation = await quotations.findOne(query);
 
@@ -31,7 +65,19 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ success: true, quotation }, { status: 200 });
+    const normalizedQuotation = {
+      ...quotation,
+      customerName: quotation.customerName || "",
+      discount: quotation.discount || 0,
+      loading: quotation.loading || 0,
+      payments: Array.isArray(quotation.payments) ? quotation.payments : [],
+      items: Array.isArray(quotation.items) ? quotation.items : [],
+    };
+
+    return NextResponse.json(
+      { success: true, quotation: normalizedQuotation },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error fetching quotation:", error);
     return NextResponse.json(
