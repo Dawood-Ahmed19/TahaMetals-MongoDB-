@@ -39,7 +39,6 @@ export const printInvoicePDF = async (quotationId: string) => {
     const quotation: Quotation = data.quotation;
     const items = quotation.items || [];
 
-    // Fetch inventory data
     const inventoryRes = await fetch("/api/inventory");
     if (!inventoryRes.ok) {
       console.error("❌ Failed to fetch inventory:", await inventoryRes.text());
@@ -52,7 +51,6 @@ export const printInvoicePDF = async (quotationId: string) => {
       ? inventoryData.items || []
       : [];
 
-    // Helper function for item display
     const getDisplayItem = (itemName: string) => {
       const invItem = inventoryItems.find((inv: any) => inv.name === itemName);
       if (invItem) {
@@ -92,20 +90,20 @@ export const printInvoicePDF = async (quotationId: string) => {
     const tahaWidth = (doc as any).getTextWidth("Taha");
     doc.text("Metals", brandX + tahaWidth + 6, brandY);
 
-    doc.setFontSize(11).setFont("helvetica", "normal");
+    doc.setFontSize(9).setFont("helvetica", "normal");
     doc.text("Invoice / Quotation", brandX, brandY + 18);
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const rightX = pageWidth - 50;
     const today = new Date(quotation.date).toLocaleDateString();
 
-    doc.setFontSize(10).text(`Date: ${today}`, rightX, brandY, {
+    doc.setFontSize(8).text(`Date: ${today}`, rightX, brandY, {
       align: "right",
     });
 
     if (quotation.quotationId) {
       doc
-        .setFontSize(9)
+        .setFontSize(8)
         .setFont("helvetica", "bold")
         .setTextColor(107, 114, 128);
       doc.text(`Quotation ID: ${quotation.quotationId}`, rightX, brandY + 15, {
@@ -130,51 +128,55 @@ export const printInvoicePDF = async (quotationId: string) => {
       body,
       startY: 100,
       theme: "striped",
-      styles: { fontSize: 10 },
+      styles: { fontSize: 8 },
       headStyles: { fillColor: [45, 55, 72], textColor: 255 },
       margin: { left: 40, right: 40 },
     });
 
     // Totals section
     const finalY = (doc as any).lastAutoTable.finalY + 20;
-    const rightXTotal = pageWidth - 160;
+    const rightMargin = 40;
+    const rightXTotal = pageWidth - rightMargin;
+    const labelX = rightXTotal - 100;
+    doc.setFontSize(8);
+    let yPos = finalY;
+
+    const drawRightText = (
+      label: string,
+      value: number | string,
+      bold = false
+    ) => {
+      if (bold) doc.setFont("helvetica", "bold");
+      else doc.setFont("helvetica", "normal");
+
+      doc.text(label + ":", labelX, yPos, { align: "left" });
+
+      doc.text(String(value), rightXTotal, yPos, { align: "right" });
+
+      yPos += 16;
+    };
+
+    drawRightText("TOTAL", quotation.total.toLocaleString());
+    drawRightText("DISCOUNT", quotation.discount.toLocaleString());
+
     const paid =
       quotation.payments?.reduce((sum: number, p: any) => sum + p.amount, 0) ||
       0;
     const balance = quotation.grandTotal - paid;
 
-    doc.setFontSize(11);
-    let yPos = finalY;
-
-    doc.text(`TOTAL: ${quotation.total.toLocaleString()}`, rightXTotal, yPos);
-    yPos += 16;
-    doc.text(
-      `DISCOUNT: ${quotation.discount.toLocaleString()}`,
-      rightXTotal,
-      yPos
-    );
-    yPos += 16;
-    doc.text(`BALANCE: ${balance.toLocaleString()}`, rightXTotal, yPos);
-    yPos += 16;
+    drawRightText("BALANCE", balance.toLocaleString());
 
     if (
       quotation.hasOwnProperty("loading") &&
       quotation.loading !== undefined &&
       quotation.loading !== null
     ) {
-      doc.text(
-        `LOADING: ${quotation.loading.toLocaleString()}`,
-        rightXTotal,
-        yPos
-      );
-      yPos += 16;
+      drawRightText("LOADING", quotation.loading.toLocaleString());
     }
 
-    doc.text(
-      `GRAND TOTAL: ${quotation.grandTotal.toLocaleString()}`,
-      rightXTotal,
-      yPos
-    );
+    drawRightText("GRAND TOTAL", quotation.grandTotal.toLocaleString(), true);
+
+    // Footer
 
     doc
       .setFontSize(10)
