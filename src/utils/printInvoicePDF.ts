@@ -144,11 +144,19 @@ export const printInvoicePDF = async (quotationId: string) => {
       margin: { left: 40, right: 40 },
     });
 
-    // Totals section
-    const finalY = (doc as any).lastAutoTable.finalY + 20;
+    // --- Totals section ---
+    let finalY = (doc as any).lastAutoTable.finalY + 20;
+    const pageHeight = doc.internal.pageSize.height;
+
+    if (finalY + 100 > pageHeight) {
+      doc.addPage();
+      finalY = 40;
+    }
+
     const rightMargin = 40;
     const rightXTotal = pageWidth - rightMargin;
     const labelX = rightXTotal - 100;
+
     doc.setFontSize(8);
     let yPos = finalY;
 
@@ -161,7 +169,6 @@ export const printInvoicePDF = async (quotationId: string) => {
       else doc.setFont("helvetica", "normal");
 
       doc.text(label + ":", labelX, yPos, { align: "left" });
-
       doc.text(String(value), rightXTotal, yPos, { align: "right" });
 
       yPos += 16;
@@ -188,10 +195,11 @@ export const printInvoicePDF = async (quotationId: string) => {
     drawRightText("GRAND TOTAL", quotation.grandTotal.toLocaleString(), true);
 
     // Footer
-
+    const footerY = doc.internal.pageSize.height - 40;
     doc
       .setFontSize(10)
-      .text("Thank you for Purchasing!", 40, doc.internal.pageSize.height - 40);
+      .setFont("helvetica", "normal")
+      .text("Thank you for Purchasing!", 40, footerY);
 
     // --- Print directly ---
     const pdfBlob = doc.output("blob");
