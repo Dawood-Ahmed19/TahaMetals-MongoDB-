@@ -125,24 +125,6 @@ const HardwareItemNameOptions = [
   "Glass Cutter",
 ];
 
-const PlateSizeRoundOptions = [
-  '2" x 4"',
-  '3" x 5"',
-  '1-1/2" x 3"',
-  '3"',
-  '3-1/2"',
-  '4"',
-  '5"',
-  '1/2" x 2"',
-  '1/2" x 1-1/2"',
-];
-const PlateSizeSquareOptions = [
-  '1/2" x 1-1/2" x 1-1/2"',
-  '1/2" x 2" x 1"',
-  '1/2" x 3" x 3"',
-  '1/2" x 2" x 2"',
-];
-
 const BasecupSizeRoundOptions = [
   '1/2" x 2"',
   '1/2" x 1-1/2"',
@@ -196,7 +178,21 @@ interface ItemCardProps {
 
 export default function ItemCard({ initialData }: ItemCardProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [hardwareItems, setHardwareItems] = useState<any[]>([]);
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchHardwareItems = async () => {
+      try {
+        const res = await fetch("/api/hardware-items");
+        const data = await res.json();
+        if (data.success) setHardwareItems(data.items);
+      } catch (err) {
+        console.error("Error fetching hardware items", err);
+      }
+    };
+    fetchHardwareItems();
+  }, []);
 
   const [formData, setFormData] = useState({
     id: "",
@@ -241,47 +237,79 @@ export default function ItemCard({ initialData }: ItemCardProps) {
   }, [initialData]);
 
   const isPillars = formData.itemType === "Pillars";
-  const isHardwarePlate =
-    formData.itemType === "Hardware" && formData.itemName === "Plate";
-  const isHardwareBasecup =
-    formData.itemType === "Hardware" && formData.itemName === "Basecup";
-  const isHardwareBand =
-    formData.itemType === "Hardware" && formData.itemName === "Band";
-  const isHardwareCuttBall =
-    formData.itemType === "Hardware" && formData.itemName === "Cutt Ball";
-  const isHardwareDraz =
-    formData.itemType === "Hardware" && formData.itemName === "Draz";
-  const isHardwareRod =
-    formData.itemType === "Hardware" && formData.itemName === "Rod";
+  const selectedHardware = hardwareItems.find(
+    (item) => item.name === formData.itemName
+  );
+  const hardwareNameOptions = hardwareItems.map((h) => h.name);
+  let sizeOptions: string[] = [];
+
+  if (formData.itemType === "Hardware" && selectedHardware) {
+    // item supports Round/Square
+    if (selectedHardware.hasPipeTypes) {
+      // pick the sizes array for the active pipeType
+      const pipeKey = formData.pipeType?.trim();
+      if (
+        pipeKey &&
+        selectedHardware.sizes &&
+        typeof selectedHardware.sizes === "object"
+      ) {
+        const match =
+          selectedHardware.sizes[pipeKey] ||
+          selectedHardware.sizes[pipeKey.toLowerCase()] ||
+          [];
+        sizeOptions = (match as string[]).filter(Boolean);
+      } else {
+        sizeOptions = [];
+      }
+    } else {
+      // simple hardware (no pipe type distinction)
+      if (Array.isArray(selectedHardware.sizes)) {
+        sizeOptions = selectedHardware.sizes as string[];
+      } else if (
+        typeof selectedHardware.sizes === "object" &&
+        selectedHardware.sizes.general
+      ) {
+        sizeOptions = (selectedHardware.sizes.general as string[]).filter(
+          Boolean
+        );
+      }
+    }
+  } else if (formData.itemType === "Pipe") {
+    sizeOptions =
+      formData.pipeType === "Round"
+        ? [...RoundItemSizeOptions, ...AdditionalRoundItemSizeOptions]
+        : formData.pipeType === "Square"
+        ? [...SquareItemSizeOptions, ...AdditionalSquareItemSizeOptions]
+        : [];
+  } else if (formData.itemType === "Pillars") {
+    sizeOptions =
+      formData.pipeType === "Round"
+        ? RoundItemSizeOptions
+        : formData.pipeType === "Square"
+        ? [...SquareItemSizeOptions, ...AdditionalSquareItemSizePillars]
+        : [];
+  } else {
+    sizeOptions =
+      formData.pipeType === "Round"
+        ? RoundItemSizeOptions
+        : SquareItemSizeOptions;
+  }
+  const hasSizes =
+    formData.itemType === "Hardware"
+      ? !!(
+          selectedHardware &&
+          selectedHardware.sizes &&
+          Object.values(selectedHardware.sizes).some(
+            (arr: any) => Array.isArray(arr) && arr.length > 0
+          )
+        )
+      : true;
+  const colorOptions = selectedHardware?.colors ?? [];
+  const priceType = selectedHardware?.priceType ?? "unit";
   const isHardwareGote =
     formData.itemType === "Hardware" && formData.itemName === "Gote";
-  const isHardwareStopper =
-    formData.itemType === "Hardware" && formData.itemName === "Stopper";
-  const isHardwareRing =
-    formData.itemType === "Hardware" && formData.itemName === "Ring";
   const isHardwareStar =
     formData.itemType === "Hardware" && formData.itemName === "Star";
-  const isHardwareBalls =
-    formData.itemType === "Hardware" && formData.itemName === "VIP Ball";
-  const isHardwareChutkni =
-    formData.itemType === "Hardware" && formData.itemName === "Chutkni";
-  const isHardwareBolt =
-    formData.itemType === "Hardware" &&
-    formData.itemName === "Rawal Bolt CC 13mm";
-  const isHardwareChinaBall =
-    formData.itemType === "Hardware" && formData.itemName === "China Ball";
-  const isHardwareDiskRed =
-    formData.itemType === "Hardware" && formData.itemName === "Disk Red";
-  const isHardwareDiskWhite =
-    formData.itemType === "Hardware" && formData.itemName === "Disk White";
-  const isHardwareDiskRegmar =
-    formData.itemType === "Hardware" && formData.itemName === "Disk Regmar";
-  const isHardwareDiskGp =
-    formData.itemType === "Hardware" && formData.itemName === "Disk G.P";
-  const isHardwareDiskCutting =
-    formData.itemType === "Hardware" && formData.itemName === "Disk Cutting";
-  const isHardwareGlassCutter =
-    formData.itemType === "Hardware" && formData.itemName === "Glass Cutter";
 
   // ================= Handle submit =====================
 
@@ -489,18 +517,14 @@ export default function ItemCard({ initialData }: ItemCardProps) {
           {
             label: "Item Name",
             value: formData.itemName,
-            type: formData.itemType === "Hardware" ? "select" : "text",
+            type: "select",
             options:
-              formData.itemType === "Hardware" ? HardwareItemNameOptions : [],
-            placeholder:
-              formData.itemType === "Hardware"
-                ? "Select Item Name"
-                : "Enter Item Name",
+              formData.itemType === "Hardware" ? hardwareNameOptions : [],
+            placeholder: "Select Item Name",
             onChange: (value: string) =>
               setFormData((prev) => ({
                 ...prev,
                 itemName: value,
-                pipeType: "",
                 itemSize: "",
                 color: "",
               })),
@@ -508,7 +532,7 @@ export default function ItemCard({ initialData }: ItemCardProps) {
         ]
       : []),
 
-    ...(isHardwarePlate || isHardwareBasecup || isHardwareStopper
+    ...(formData.itemType === "Hardware" && selectedHardware?.hasPipeTypes
       ? [hardwareTypeField]
       : []),
 
@@ -516,89 +540,38 @@ export default function ItemCard({ initialData }: ItemCardProps) {
       label: "Item Size",
       value: formData.itemSize,
       type: "select",
-      options: isHardwareGote
-        ? ["1", "2", "3", "4", "5", "6", "7", "8"]
-        : formData.itemType === "Pipe"
-        ? formData.pipeType === "Round"
-          ? [...RoundItemSizeOptions, ...AdditionalRoundItemSizeOptions]
-          : formData.pipeType === "Square"
-          ? [...SquareItemSizeOptions, ...AdditionalSquareItemSizeOptions]
-          : []
-        : formData.itemType === "Pillars"
-        ? formData.pipeType === "Round"
+      options:
+        formData.itemType === "Hardware"
+          ? sizeOptions
+          : formData.itemType === "Pipe"
+          ? formData.pipeType === "Round"
+            ? [...RoundItemSizeOptions, ...AdditionalRoundItemSizeOptions]
+            : formData.pipeType === "Square"
+            ? [...SquareItemSizeOptions, ...AdditionalSquareItemSizeOptions]
+            : []
+          : formData.itemType === "Pillars"
+          ? formData.pipeType === "Round"
+            ? RoundItemSizeOptions
+            : formData.pipeType === "Square"
+            ? [...SquareItemSizeOptions, ...AdditionalSquareItemSizePillars]
+            : []
+          : formData.pipeType === "Round"
           ? RoundItemSizeOptions
-          : formData.pipeType === "Square"
-          ? [...SquareItemSizeOptions, ...AdditionalSquareItemSizePillars]
-          : []
-        : isHardwarePlate
-        ? formData.pipeType === "Round"
-          ? PlateSizeRoundOptions
-          : PlateSizeSquareOptions
-        : isHardwareBasecup
-        ? formData.pipeType === "Round"
-          ? BasecupSizeRoundOptions
-          : BasecupSizeSquareOptions
-        : isHardwareBand
-        ? BandSizeOptions
-        : isHardwareCuttBall
-        ? CuttBallSizeOptions
-        : isHardwareDraz
-        ? DarazSizeOptions
-        : isHardwareRod
-        ? RodSizeOptions
-        : isHardwareStopper
-        ? formData.pipeType === "Round"
-          ? [...stopperRoundSize]
-          : formData.pipeType === "Square"
-          ? [...stopperSquareSize]
-          : []
-        : isHardwareRing
-        ? [...RingSize]
-        : isHardwareChinaBall
-        ? [...ChinaBallSizeOptions]
-        : isHardwareStar
-        ? [...StarSize]
-        : isHardwareBalls
-        ? [...VipBallsSize]
-        : isHardwareChutkni
-        ? [...ChutkniSize]
-        : isHardwareDiskRed ||
-          isHardwareDiskWhite ||
-          isHardwareDiskRegmar ||
-          isHardwareDiskGp
-        ? [...DiskSizeOptions]
-        : isHardwareDiskCutting
-        ? [...DiskSizeOptions, ...DiskAdditionalSizeOptions]
-        : isHardwareGlassCutter
-        ? [...GlassCutterSize]
-        : formData.pipeType === "Round"
-        ? RoundItemSizeOptions
-        : SquareItemSizeOptions,
+          : SquareItemSizeOptions,
       hidden:
+        !hasSizes ||
         (formData.itemType === "Pillars" && formData.pipeType === "Fancy") ||
-        isHardwareBolt,
+        formData.itemName === "Rawal Bolt CC 13mm",
       onChange: (value: string) =>
         setFormData((prev) => ({ ...prev, itemSize: value })),
     },
-
-    ...(isHardwareCuttBall || isHardwareBalls || isHardwareChinaBall
+    ...(formData.itemType === "Hardware" && colorOptions.length > 0
       ? [
           {
             label: "Color",
             value: formData.color,
             type: "select",
-            options: CuttBallColorOptions,
-            onChange: (value: string) =>
-              setFormData((prev) => ({ ...prev, color: value })),
-          },
-        ]
-      : isHardwareRing || isHardwareStar
-      ? [
-          {
-            label: "Color",
-            value: formData.color,
-            type: "select",
-            options: RingColorOptions,
+            options: colorOptions,
             onChange: (value: string) =>
               setFormData((prev) => ({ ...prev, color: value })),
           },
@@ -651,35 +624,36 @@ export default function ItemCard({ initialData }: ItemCardProps) {
         ]
       : []),
 
-    ...(isHardwareBand ||
-    isHardwareCuttBall ||
-    isHardwareDraz ||
-    isPillars ||
-    isHardwareGote ||
-    isHardwareBasecup ||
-    isHardwareStopper ||
-    isHardwareRing ||
-    isHardwareStar ||
-    isHardwareBalls ||
-    isHardwareChutkni ||
-    isHardwareBolt ||
-    isHardwareChinaBall ||
-    isHardwareDiskRed ||
-    isHardwareDiskWhite ||
-    isHardwareDiskRegmar ||
-    isHardwareDiskGp ||
-    isHardwareDiskCutting ||
-    isHardwareGlassCutter
+    // ---- Pricing and Weight Fields ----
+    ...(formData.itemType === "Hardware" || formData.itemType === "Pillars"
       ? [
           {
-            label: "Price Per Unit (PKR)",
+            label:
+              priceType === "unit"
+                ? "Price Per Unit (PKR)"
+                : "Price Per Kg (PKR)",
             value: formData.price,
-            placeholder: "Enter per-item price",
+            placeholder:
+              priceType === "unit"
+                ? "Enter per-item price"
+                : "Enter price per kg",
             onChange: (value: string) =>
               setFormData((prev) => ({ ...prev, price: value })),
           },
+          ...(priceType === "weight"
+            ? [
+                {
+                  label: "Weight (KG)",
+                  value: formData.weight,
+                  placeholder: "Enter weight in KG",
+                  onChange: (value: string) =>
+                    setFormData((prev) => ({ ...prev, weight: value })),
+                },
+              ]
+            : []),
         ]
-      : [
+      : formData.itemType === "Pipe"
+      ? [
           {
             label: "Price Per Kg (PKR)",
             value: formData.price,
@@ -694,7 +668,8 @@ export default function ItemCard({ initialData }: ItemCardProps) {
             onChange: (value: string) =>
               setFormData((prev) => ({ ...prev, weight: value })),
           },
-        ]),
+        ]
+      : []),
 
     {
       label: "Total Stock",

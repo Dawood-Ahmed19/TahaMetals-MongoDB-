@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -14,23 +14,36 @@ const sideBarItems = [
   { name: "Rate list", path: "/Ratelist" },
   { name: "Expenses", path: "/Expenses" },
   { name: "Settings", path: "/Settings" },
+  { name: "Admin", path: "/admin/hardware" },
 ];
 
 export default function Sidebar() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
+  useEffect(() => {
+    const storedName = sessionStorage.getItem("username");
+    const storedRole = sessionStorage.getItem("role");
+    setUserName(storedName);
+    setRole(storedRole);
+  }, []);
+
   return (
     <div className="w-64 px-[60px] py-[34px] bg-dashboardBg min-h-screen flex flex-col justify-between">
-      {/* Logo */}
       <div className="flex items-center justify-center">
         <h1 className="text-white text-2xl font-bold">
           <span className="text-orange-300">Taha</span>Metal
         </h1>
+
+        <div>
+          <p>{userName ? userName[0].toUpperCase() : "A"}</p>
+          <p>{role === "admin" ? "Admin" : userName || "Standard User"}</p>
+        </div>
       </div>
 
-      {/* Sidebar Items */}
       <div className="relative flex flex-col space-y-1">
         {sideBarItems.map((item, index) => {
           const isActive = pathname === item.path;

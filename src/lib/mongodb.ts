@@ -1,6 +1,5 @@
 import { MongoClient } from "mongodb";
 
-// Extend the global interface to include _mongoClientPromise
 declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
@@ -25,3 +24,9 @@ if (process.env.NODE_ENV === "development") {
 }
 
 export default clientPromise;
+
+// Add this helper:
+export async function getDb() {
+  const client = await clientPromise;
+  return client.db(process.env.MONGODB_DB || "taha_metals_db");
+}
