@@ -17,21 +17,36 @@ const months = [
 ];
 
 export default function PaySalaryPage() {
-  const [employees, setEmployees] = useState([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [records, setRecords] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [records, setRecords] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedEmp, setSelectedEmp] = useState<any>(null);
   const [advanceAmount, setAdvanceAmount] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
   const limit = 10;
 
-  async function fetchEmployees(page = 1) {
-    const res = await fetch(`/api/employees?page=${page}`);
+  const startYear = 2025;
+  const now = new Date();
+  const includeNextYear = now.getMonth() === 11;
+  const endYear = includeNextYear ? now.getFullYear() + 1 : now.getFullYear();
+
+  const years = [];
+  for (let y = startYear; y <= endYear; y++) {
+    years.push(y);
+  }
+
+  async function fetchEmployees(page = 1, query = "") {
+    const url = new URL(`/api/employees`, window.location.origin);
+    url.searchParams.append("page", page.toString());
+    if (query) url.searchParams.append("search", query);
+
+    const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
-
       const emps = Array.isArray(data) ? data : data.employees || [];
       setEmployees(emps);
 
@@ -40,14 +55,18 @@ export default function PaySalaryPage() {
   }
 
   async function fetchSalaryRecords() {
-    const res = await fetch("/api/salaries");
+    const url = new URL("/api/salaries", window.location.origin);
+    url.searchParams.append("month", months[selectedMonth]);
+    url.searchParams.append("year", selectedYear.toString());
+
+    const res = await fetch(url);
     if (res.ok) setRecords(await res.json());
   }
 
   useEffect(() => {
-    fetchEmployees(currentPage);
+    fetchEmployees(currentPage, searchTerm);
     fetchSalaryRecords();
-  }, [currentPage]);
+  }, [currentPage, searchTerm, selectedMonth, selectedYear]);
 
   async function handlePay(emp: any, monthIndex: number) {
     const monthName = months[monthIndex];
@@ -141,21 +160,55 @@ export default function PaySalaryPage() {
 
   return (
     <div className="w-full p-8 text-white">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold text-white">Pay Salaries</h2>
-        <select
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(Number(e.target.value))}
-          className="px-3 py-2 rounded-md text-sm text-white outline-none"
-          style={{ backgroundColor: "var(--color-cardBg)" }}
-        >
-          {months.map((m, i) => (
-            <option key={m} value={i}>
-              {m}
-            </option>
-          ))}
-        </select>
+      {/* Header row */}
+      <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-semibold text-white">Pay Salaries</h2>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* 🔍 Search field */}
+          <input
+            type="text"
+            placeholder="Search by name..."
+            value={searchTerm}
+            onChange={(e) => {
+              setCurrentPage(1);
+              setSearchTerm(e.target.value);
+            }}
+            className="px-3 py-2 rounded-md text-sm text-white outline-none w-[220px]"
+            style={{
+              backgroundColor: "var(--color-cardBg)",
+              border: "1px solid var(--color-IconBg)",
+            }}
+          />
+          {/* Months */}
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            className="px-3 py-2 rounded-md text-sm text-white outline-none"
+            style={{ backgroundColor: "var(--color-cardBg)" }}
+          >
+            {months.map((m, i) => (
+              <option key={m} value={i}>
+                {m}
+              </option>
+            ))}
+          </select>
+          {/* Years */}
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="px-3 py-2 rounded-md text-sm text-white outline-none"
+            style={{ backgroundColor: "var(--color-cardBg)" }}
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Salary Table */}
@@ -181,7 +234,7 @@ export default function PaySalaryPage() {
           <tbody>
             {employees.length > 0 ? (
               employees.map((emp: any, index: number) => {
-                const { paid, balance, status, advance } = getStatus(emp);
+                const { balance, status, advance } = getStatus(emp);
                 return (
                   <tr
                     key={emp._id}
@@ -248,8 +301,10 @@ export default function PaySalaryPage() {
             )}
           </tbody>
         </table>
+
+        {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-4 mt-6">
+          <div className="flex justify-center items-center gap-4 mt-6 mb-4">
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
