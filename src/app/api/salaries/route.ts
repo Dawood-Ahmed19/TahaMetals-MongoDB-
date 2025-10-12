@@ -32,7 +32,6 @@ export async function POST(req: Request) {
 
     const db = await getDb();
 
-    // ─── Normalize month into "YYYY‑MM" ───────────────────────
     let monthKey: string;
     const monthStr = String(month);
 

@@ -6,11 +6,14 @@ import { usePathname } from "next/navigation";
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   const pathname = usePathname();
-  const showSidebar = pathname !== "/Login";
+
+  const hideSidebar =
+    pathname.toLowerCase().startsWith("/login") ||
+    pathname.toLowerCase().startsWith("/signup");
 
   return (
     <html lang="en">
@@ -22,7 +25,7 @@ export default function RootLayout({
       </head>
       <body className="bg-BgColor font-poppins">
         <div className="flex">
-          {showSidebar && <Sidebar />}
+          {!hideSidebar && <Sidebar />}
           <main className="flex-1">{children}</main>
         </div>
       </body>
