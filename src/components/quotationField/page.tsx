@@ -451,6 +451,9 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
       });
       setIsSaving(true);
 
+      const username = sessionStorage.getItem("username");
+      const role = sessionStorage.getItem("role");
+
       const response = await fetch("/api/quotations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -475,6 +478,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
             received > 0
               ? [{ amount: received, date: new Date().toISOString() }]
               : [],
+          createdBy: role === "admin" ? "Admin" : username || "Unknown",
         }),
       });
 

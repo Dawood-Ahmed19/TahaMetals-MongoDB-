@@ -23,6 +23,7 @@ interface Quotation {
   status?: string;
   loading?: number;
   customerName?: string;
+  createdBy?: string;
 }
 
 export async function POST(req: Request) {
@@ -36,6 +37,7 @@ export async function POST(req: Request) {
       loading,
       quotationId,
       customerName,
+      createdBy,
     } = await req.json();
 
     const client = await clientPromise;
@@ -144,6 +146,7 @@ export async function POST(req: Request) {
               balance,
               status: "active",
               ...(customerName ? { customerName } : {}),
+              ...(createdBy ? { createdBy } : {}),
             },
           }
         );
@@ -164,6 +167,7 @@ export async function POST(req: Request) {
             totalReceived,
             balance,
             status: "active",
+            ...(createdBy ? { createdBy } : {}),
           },
         });
       }
@@ -185,6 +189,7 @@ export async function POST(req: Request) {
       loading: Number(loading) || 0,
       status: "active",
       ...(customerName ? { customerName } : {}),
+      ...(createdBy ? { createdBy } : {}),
     });
 
     return NextResponse.json({
@@ -204,6 +209,8 @@ export async function POST(req: Request) {
         totalReceived,
         balance,
         status: "active",
+        ...(customerName ? { customerName } : {}),
+        ...(createdBy ? { createdBy } : {}),
       },
     });
   } catch (err: any) {

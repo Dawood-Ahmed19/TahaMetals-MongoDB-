@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, m } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
 
-const sideBarItems = [
+const AllsideBarPaths = [
   { name: "Dashboard", path: "/Dashboard" },
   { name: "Inventory", path: "/Inventory" },
   { name: "Add Item", path: "/addItem" },
@@ -14,13 +14,26 @@ const sideBarItems = [
   { name: "Rate list", path: "/Ratelist" },
   { name: "Expenses", path: "/Expenses" },
   { name: "Settings", path: "/Settings" },
+  { name: "Salaries", path: "/Salary" },
+  { name: "Pay Salary", path: "/AddSalary" },
   { name: "Admin", path: "/admin/hardware" },
+];
+
+const userAllowedPaths = [
+  "/Dashboard",
+  "/Inventory",
+  "/addItem",
+  "/Expenses",
+  "/Invoice",
+  "/Returned",
+  "/Settings",
 ];
 
 export default function Sidebar() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -31,16 +44,35 @@ export default function Sidebar() {
     setRole(storedRole);
   }, []);
 
+  const handleLogout = () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+
+    setTimeout(() => {
+      sessionStorage.clear();
+      router.push("/Login");
+    }, 600);
+  };
+
+  const sideBarItems =
+    role === "admin"
+      ? AllsideBarPaths
+      : AllsideBarPaths.filter((item) => userAllowedPaths.includes(item.path));
+
   return (
     <div className="w-64 px-[60px] py-[34px] bg-dashboardBg min-h-screen flex flex-col justify-between">
-      <div className="flex items-center justify-center">
+      <div className="flex flex-col items-center justify-center gap-5">
         <h1 className="text-white text-2xl font-bold">
           <span className="text-orange-300">Taha</span>Metal
         </h1>
 
-        <div>
-          <p>{userName ? userName[0].toUpperCase() : "A"}</p>
-          <p>{role === "admin" ? "Admin" : userName || "Standard User"}</p>
+        <div className="flex flex-col items-center">
+          <p className="text-sm text-white font-bold">
+            {userName ? userName : ""}
+          </p>
+          <p className="text-xs text-gray-400">
+            {role === "admin" ? "Admin" : "Standard User"}
+          </p>
         </div>
       </div>
 
@@ -82,7 +114,16 @@ export default function Sidebar() {
       </div>
 
       {/* Footer */}
-      <div className="text-white text-xs">
+      <div className="text-white text-xs flex flex-col items-center gap-5">
+        <button
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className={`w-full bg-BgColor hover:bg-IconBg text-white font-semibold py-2 rounded-md transition-opacity ${
+            loggingOut ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+        >
+          {loggingOut ? "Logging out..." : "Logout"}
+        </button>
         © {new Date().getFullYear()} TahaMetals
       </div>
     </div>

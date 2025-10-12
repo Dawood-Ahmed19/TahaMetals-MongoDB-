@@ -23,28 +23,59 @@ export interface Item {
 
 export default function InventoryCard() {
   const [items, setItems] = useState<Item[]>([]);
-  const [searchItem, setSearchitem] = useState("");
-  const [filterType, setFilterType] = useState<string>("All");
+  const [searchItem, setSearchItem] = useState("");
+  const [typeFilter, setTypeFilter] = useState("All");
+  const [sizeFilter, setSizeFilter] = useState("All");
+  const [guageFilter, setGuageFilter] = useState("All");
+  const [allSizes, setAllSizes] = useState<string[]>(["All"]);
+  const [allGuages, setAllGuages] = useState<string[]>(["All"]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchItems = async () => {
+    try {
+      setLoading(true);
+      const query = new URLSearchParams();
+
+      if (searchItem.trim()) query.append("search", searchItem.trim());
+      if (typeFilter !== "All") query.append("type", typeFilter);
+      if (sizeFilter !== "All") query.append("size", sizeFilter);
+      if (guageFilter !== "All") query.append("guage", guageFilter);
+
+      const res = await fetch(`/api/items?${query.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch items");
+
+      const data = await res.json();
+      setItems(data.items || []);
+    } catch (err) {
+      console.error("Error fetching items:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchFilterOptions = async () => {
+    try {
+      const res = await fetch("/api/items/filters");
+      if (!res.ok) throw new Error("Failed to fetch filters");
+      const data = await res.json();
+
+      if (data.success) {
+        setAllSizes(data.sizes || ["All"]);
+        setAllGuages(data.guages || ["All"]);
+      }
+    } catch (err) {
+      console.error("Error fetching filter options:", err);
+    }
+  };
 
   useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const query = new URLSearchParams();
-        if (filterType !== "All") query.append("type", filterType);
-        if (searchItem.trim()) query.append("search", searchItem.trim());
-
-        const res = await fetch(`/api/items?${query.toString()}`);
-        if (!res.ok) throw new Error("Failed to fetch items");
-
-        const data = await res.json();
-        setItems(data.items || []);
-      } catch (err) {
-        console.error("Error fetching items:", err);
-      }
-    };
-
+    fetchFilterOptions();
     fetchItems();
-  }, [filterType, searchItem]);
+  }, []);
+
+  useEffect(() => {
+    fetchItems();
+  }, [searchItem, typeFilter, sizeFilter, guageFilter]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this item?")) return;
@@ -54,7 +85,7 @@ export default function InventoryCard() {
       const data = await res.json();
 
       if (res.ok && data?.success) {
-        setItems((prev) => prev.filter((item) => item._id !== id));
+        fetchItems();
       } else {
         alert("❌ Failed to delete: " + (data?.error || res.statusText));
       }
@@ -70,32 +101,82 @@ export default function InventoryCard() {
       2xl:px-[80px] 2xl:py-[80px]
       xl-only:px-[50px] xl-only:py-[50px]"
     >
-      <span>
+      {/* Search Field */}
+      <div>
         <FormField
           label="Search your Item"
           value={searchItem}
-          onChange={(value: string) => setSearchitem(value)}
+          onChange={(value: string) => setSearchItem(value)}
           placeholder="Type here"
           fontSize="14px"
         />
-      </span>
+      </div>
 
-      <span className="flex items-center gap-4 mb-4">
-        <label className="text-white text-sm xl-only:text-xs">
-          Filter by Type:
-        </label>
-        <select
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
-          className="bg-fieldBg text-white p-2 rounded text-sm xl-only:text-xs"
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-4 mb-4">
+        {/* Type Filter */}
+        <div>
+          <label className="mr-2 text-white text-sm">Filter by Type:</label>
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="px-3 py-1 rounded bg-gray-800 text-white border border-gray-600 text-sm"
+          >
+            <option value="All">All</option>
+            <option value="Hardware">Hardware</option>
+            <option value="Pipe">Pipe</option>
+            <option value="Pillars">Pillars</option>
+          </select>
+        </div>
+
+        {/* Size Filter */}
+        <div>
+          <label className="mr-2 text-white text-sm">Filter by Size:</label>
+          <select
+            value={sizeFilter}
+            onChange={(e) => setSizeFilter(e.target.value)}
+            className="px-3 py-1 rounded bg-gray-800 text-white border border-gray-600 text-sm"
+          >
+            {allSizes.map((s) => (
+              <option key={s} value={s}>
+                {s === "All" ? "All" : s}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Gauge Filter */}
+        <div>
+          <label className="mr-2 text-white text-sm">Filter by Gauge:</label>
+          <select
+            value={guageFilter}
+            onChange={(e) => setGuageFilter(e.target.value)}
+            className="px-3 py-1 rounded bg-gray-800 text-white border border-gray-600 text-sm"
+          >
+            {allGuages.map((g) => (
+              <option key={g} value={g}>
+                {g === "All" ? "All" : g}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Reset */}
+        <button
+          onClick={() => {
+            setSearchItem("");
+            setTypeFilter("All");
+            setSizeFilter("All");
+            setGuageFilter("All");
+          }}
+          className="bg-BgColor hover:bg-IconBg text-white px-3 py-1 rounded text-sm"
         >
-          <option value="All">All</option>
-          <option value="Hardware">Hardware</option>
-          <option value="Pipe">Pipe</option>
-          <option value="Pillars">Pillars</option>
-        </select>
-      </span>
-      <span
+          Reset Filters
+        </button>
+      </div>
+
+      {/* Table header */}
+      <div
         className={`${inventoryGridCols} px-[30px] xl-only:px-[80px] py-[20px] bg-fieldBg border-b rounded-t-sm border-gray-600 
           text-white text-xs xl-only:text-[14px]`}
       >
@@ -113,37 +194,42 @@ export default function InventoryCard() {
         <p>Amount</p>
         <p>Actions</p>
         <p>Date</p>
-      </span>
+      </div>
 
-      <span className="max-h-[800px] overflow-y-auto">
-        {/* Header row */}
+      {/* Table Body */}
+      <div className="max-h-[800px] overflow-y-auto">
+        {loading ? (
+          <p className="text-center text-gray-400 py-8">Loading items…</p>
+        ) : items.length > 0 ? (
+          items.map((item) => {
+            const pricePerKg = item.pricePerKg ?? "N/A";
+            const unitPrice = item.pricePerUnit ?? "N/A";
+            const colorValue =
+              item.color && item.color.trim() !== "" ? item.color : "N/A";
+            const formattedWeight = item.weight
+              ? Number.isInteger(item.weight)
+                ? item.weight
+                : Number(item.weight.toFixed(2))
+              : undefined;
 
-        {/* Data rows */}
-        {items.map((item) => {
-          const pricePerKg = item.pricePerKg ?? "N/A";
-          const unitPrice = item.pricePerUnit ?? "N/A";
-
-          const colorValue =
-            item.color && item.color.trim() !== "" ? item.color : "N/A";
-          const formattedWeight = item.weight
-            ? Number.isInteger(item.weight)
-              ? item.weight
-              : Number(item.weight.toFixed(2))
-            : undefined;
-
-          return (
-            <InventoryItem
-              key={item._id}
-              {...item}
-              color={colorValue}
-              pricePerKg={pricePerKg}
-              unitPrice={unitPrice}
-              weight={formattedWeight}
-              onDelete={handleDelete}
-            />
-          );
-        })}
-      </span>
+            return (
+              <InventoryItem
+                key={item._id}
+                {...item}
+                color={colorValue}
+                pricePerKg={pricePerKg}
+                unitPrice={unitPrice}
+                weight={formattedWeight}
+                onDelete={handleDelete}
+              />
+            );
+          })
+        ) : (
+          <p className="text-center text-gray-400 py-8">
+            No items match current filters.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

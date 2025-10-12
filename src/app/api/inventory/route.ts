@@ -23,7 +23,7 @@ interface InventoryItem {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    console.log("📦 Incoming body →", body);
+    console.log("Incoming body →", body);
 
     let {
       name,

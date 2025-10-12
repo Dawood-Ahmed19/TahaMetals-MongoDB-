@@ -94,6 +94,15 @@ const InvoiceDetails = () => {
             </p>
           )}
 
+          {invoice.createdBy && (
+            <p className="text-center text-gray-300 text-sm mb-2">
+              Created by:{" "}
+              <span className="font-semibold text-white">
+                {invoice.createdBy}
+              </span>
+            </p>
+          )}
+
           <h1 className="text-2xl font-bold mb-2 text-center text-white">
             Invoice {invoice.quotationId}
           </h1>

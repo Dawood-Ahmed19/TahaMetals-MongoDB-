@@ -72,16 +72,19 @@ function normalizeItem(item: any): InventoryItem {
   };
 }
 
-// GET (with filtering support)
+// GET
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
+    const size = searchParams.get("size");
+    const guage = searchParams.get("guage");
     const search = searchParams.get("search");
 
     const client = await clientPromise;
     const db = client.db("TahaMetals");
-    const collection = db.collection<InventoryItem>("inventory");
+    const collection = db.collection("inventory");
 
     const query: any = {};
 
@@ -89,15 +92,23 @@ export async function GET(req: Request) {
       query.type = { $regex: new RegExp(`^${type}$`, "i") };
     }
 
-    if (search) {
-      query.name = { $regex: search, $options: "i" };
+    if (size && size.toLowerCase() !== "all") {
+      query.size = { $regex: new RegExp(`^${size}$`, "i") };
     }
 
-    const items = await collection.find(query).toArray();
+    if (guage && guage.toLowerCase() !== "all") {
+      query.guage = { $regex: new RegExp(`^${guage}$`, "i") };
+    }
+
+    if (search && search.trim() !== "") {
+      query.name = { $regex: search.trim(), $options: "i" };
+    }
+
+    const items = await collection.find(query).sort({ date: -1 }).toArray();
 
     return NextResponse.json({ success: true, items });
   } catch (error) {
-    console.error("Error fetching items:", error);
+    console.error("❌ Error fetching items:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch items" },
       { status: 500 }
@@ -105,11 +116,11 @@ export async function GET(req: Request) {
   }
 }
 
-// POST (merged handler with auto-naming for pipes & pillars)
+// POST
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const normalized = normalizeItem(body); // Apply normalization
+    const normalized = normalizeItem(body);
     let itemName = normalized.name;
     let itemIndex: number | undefined;
 
