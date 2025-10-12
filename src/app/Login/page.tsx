@@ -26,46 +26,61 @@ export default function Login() {
   const handleLogin = async () => {
     if (loading) return;
 
+    // Reset errors
     setEmailError("");
     setUsernameError("");
     setPasswordError("");
-    let hasError = false;
-    if (!role) return;
 
+    let hasError = false;
+
+    // Make sure a role is selected
+    if (!role) {
+      showTempError(setEmailError, "Please select your role first.");
+      return;
+    }
+
+    // Validate inputs
     if (role === "user" && username.trim() === "") {
       showTempError(setUsernameError, "Please enter your name.");
       hasError = true;
     }
+
     if (email.trim() === "") {
       showTempError(setEmailError, "Please enter your email.");
       hasError = true;
     }
+
     if (password.trim() === "") {
       showTempError(setPasswordError, "Please enter your password.");
       hasError = true;
     }
+
     if (hasError) return;
 
     try {
       setLoading(true);
+
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, role }),
       });
 
       const data = await res.json();
       setLoading(false);
 
+      // Handle login errors
       if (!data.success) {
-        showTempError(setPasswordError, data.message || "Login failed");
+        showTempError(setPasswordError, data.message || "Login failed.");
         return;
       }
 
+      sessionStorage.clear();
+
       sessionStorage.setItem("token", data.token);
       sessionStorage.setItem("role", data.user.role);
-      sessionStorage.setItem("userName", data.user.name || username);
-      sessionStorage.setItem("email", email);
+      sessionStorage.setItem("username", data.user.name || username);
+      sessionStorage.setItem("email", data.user.email || email);
 
       router.push("/Dashboard");
     } catch (err) {
