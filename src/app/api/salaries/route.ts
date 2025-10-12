@@ -13,6 +13,7 @@ export async function POST(req: Request) {
       paidAmount = 0,
       balanceRemaining = totalSalary,
       fullyPaid = false,
+      advancePaid = 0,
     } = body;
 
     const db = await getDb();
@@ -23,7 +24,6 @@ export async function POST(req: Request) {
       year,
     };
 
-    // create or overwrite safely
     const result = await db.collection("salaries").updateOne(
       match,
       {
@@ -35,11 +35,12 @@ export async function POST(req: Request) {
           paidAmount,
           balanceRemaining,
           fullyPaid,
+          advancePaid,
           updatedAt: new Date(),
         },
         $setOnInsert: { createdAt: new Date() },
       },
-      { upsert: true } // create new if not existing
+      { upsert: true }
     );
 
     return NextResponse.json({ success: true, result });
