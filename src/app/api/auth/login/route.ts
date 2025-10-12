@@ -16,6 +16,12 @@ export async function POST(req: Request) {
       );
     }
 
+    console.log(
+      "🔍 MONGODB_URI:",
+      process.env.MONGODB_URI ? "Loaded ✅" : "Missing ❌"
+    );
+    console.log("🔍 MONGODB_DB:", process.env.MONGODB_DB || "Not found");
+
     const db = await getDb();
     const user = await db.collection("users").findOne({ email });
 
