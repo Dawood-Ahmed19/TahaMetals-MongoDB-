@@ -19,6 +19,7 @@ export default function ExpensesPage() {
   const [months, setMonths] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [salaryTotal, setSalaryTotal] = useState(0);
 
   const fetchSettings = async () => {
     try {
@@ -77,6 +78,11 @@ export default function ExpensesPage() {
     if (data.success) setEntries(data.expenses || []);
     else setEntries([]);
     setLoading(false);
+
+    const salaryRes = await fetch(`/api/salaries/total?month=${month}`);
+    const salaryData = await salaryRes.json();
+    if (salaryData.success) setSalaryTotal(salaryData.total);
+    else setSalaryTotal(0);
   };
 
   useEffect(() => {
@@ -322,15 +328,31 @@ export default function ExpensesPage() {
                   onClick={() => printExpenseSheet(currentMonth!)}
                   className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-md font-medium"
                 >
-                  Print Sheet
+                  Print Sheet
                 </button>
               )}
-              <p className="text-lg font-semibold">
-                Total:{" "}
-                <span className="text-yellow-400">
-                  {total.toLocaleString("en-US")} Rs
-                </span>
-              </p>
+              <div className="text-right space-y-1">
+                <div className="text-right space-y-1 mt-4">
+                  <p>
+                    <span className="text-gray-400">Monthly Expenses: </span>
+                    <span className="text-yellow-400">
+                      {total.toLocaleString("en-US")} Rs
+                    </span>
+                  </p>
+                  <p>
+                    <span className="text-gray-400">Salaries Paid: </span>
+                    <span className="text-green-400">
+                      {salaryTotal.toLocaleString("en-US")} Rs
+                    </span>
+                  </p>
+                  <p className="text-lg font-semibold">
+                    <span className="text-gray-300">Grand Total: </span>
+                    <span className="text-orange-400">
+                      {(total + salaryTotal).toLocaleString("en-US")} Rs
+                    </span>
+                  </p>
+                </div>
+              </div>
             </div>
 
             {saving && (

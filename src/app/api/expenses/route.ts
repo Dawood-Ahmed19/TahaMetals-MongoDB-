@@ -14,10 +14,61 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, months });
     }
 
+    // 1️⃣ fetch stored expense entries
     const doc = await db.collection(COLLECTION).findOne({ month });
+    const currentEntries = doc?.entries || [];
+
+    // 2️⃣ calculate total salaries actually paid this month
+    const salaryAgg = await db
+      .collection("salaries")
+      .aggregate([
+        { $match: { month } },
+        {
+          $group: {
+            _id: null,
+            totalPaid: {
+              $sum: {
+                $add: ["$paidAmount", "$advancePaid"],
+              },
+            },
+          },
+        },
+      ])
+      .toArray();
+
+    const salaryTotal = salaryAgg.length > 0 ? salaryAgg[0].totalPaid : 0;
+
+    // 3️⃣ update / insert the “Employee Salaries” row
+    const other = currentEntries.filter(
+      (e: any) => e.description !== "Employee Salaries"
+    );
+
+    const salaryRow = {
+      date: new Date().toISOString().split("T")[0],
+      description: "Employee Salaries",
+      amount: salaryTotal,
+    };
+
+    const mergedEntries = [...other, salaryRow];
+
+    // 4️⃣ upsert the merged set back into expenses
+    await db.collection(COLLECTION).updateOne(
+      { month },
+      {
+        $set: {
+          month,
+          path: `expenses/${month}`,
+          entries: mergedEntries,
+          updatedAt: new Date(),
+        },
+        $setOnInsert: { createdAt: new Date() },
+      },
+      { upsert: true }
+    );
+
     return NextResponse.json({
       success: true,
-      expenses: doc?.entries || [],
+      expenses: mergedEntries,
     });
   } catch (err: any) {
     console.error("GET /api/expenses", err);
