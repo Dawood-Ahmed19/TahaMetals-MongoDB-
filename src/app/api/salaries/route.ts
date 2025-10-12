@@ -2,6 +2,20 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 
+interface ExpenseEntry {
+  date: string;
+  description: string;
+  amount: number;
+}
+
+interface ExpenseDoc {
+  month: string;
+  path?: string;
+  entries?: ExpenseEntry[];
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -18,24 +32,66 @@ export async function POST(req: Request) {
 
     const db = await getDb();
 
+    // ─── Normalize month into "YYYY‑MM" ───────────────────────
+    let monthKey: string;
+    const monthStr = String(month);
+
+    if (/^\d{4}-\d{2}$/.test(monthStr)) {
+      monthKey = monthStr;
+    } else if (typeof month === "number" || /^\d+$/.test(monthStr)) {
+      monthKey = `${year}-${String(Number(month)).padStart(2, "0")}`;
+    } else {
+      const lookup: Record<string, string> = {
+        January: "01",
+        February: "02",
+        March: "03",
+        April: "04",
+        May: "05",
+        June: "06",
+        July: "07",
+        August: "08",
+        September: "09",
+        October: "10",
+        November: "11",
+        December: "12",
+      };
+      monthKey = `${year}-${lookup[monthStr] ?? "00"}`;
+    }
+
+    // ─── Compute new totals (additive if record exists) ───────
     const match = {
       employeeId: new ObjectId(employeeId),
-      month,
-      year,
+      month: monthKey,
+      year: Number(year),
     };
 
+    const existing = await db.collection("salaries").findOne(match);
+
+    const prevPaid = Number(existing?.paidAmount || 0);
+    const prevAdvance = Number(existing?.advancePaid || 0);
+    const prevTotalSalary = Number(existing?.totalSalary || totalSalary);
+
+    const newPaidAmount = prevPaid + Number(paidAmount);
+    const newAdvancePaid = prevAdvance + Number(advancePaid);
+    const newBalanceRemaining = Math.max(
+      0,
+      prevTotalSalary - newPaidAmount - newAdvancePaid
+    );
+    const isFullyPaid = newBalanceRemaining <= 0;
+
+    // ─── Upsert salary record ─────────────────────────────────
     const result = await db.collection("salaries").updateOne(
       match,
       {
         $set: {
           employeeId: new ObjectId(employeeId),
-          month,
-          year,
-          totalSalary,
-          paidAmount,
-          balanceRemaining,
-          fullyPaid,
-          advancePaid,
+          month: monthKey,
+          year: Number(year),
+          totalSalary: prevTotalSalary,
+          paidAmount: newPaidAmount,
+          advancePaid: newAdvancePaid,
+          balanceRemaining: newBalanceRemaining,
+          fullyPaid: isFullyPaid,
           updatedAt: new Date(),
         },
         $setOnInsert: { createdAt: new Date() },
@@ -43,9 +99,42 @@ export async function POST(req: Request) {
       { upsert: true }
     );
 
+    // ─── Log an expense entry for this payout ─────────────────
+    try {
+      const totalPaidOut = Number(paidAmount) + Number(advancePaid);
+      if (totalPaidOut > 0) {
+        const expenses = db.collection<ExpenseDoc>("expenses");
+
+        await expenses.updateOne(
+          { month: monthKey },
+          {
+            $setOnInsert: {
+              createdAt: new Date(),
+              path: `expenses/${monthKey}`,
+              entries: [],
+            },
+            $set: { updatedAt: new Date() },
+            $push: {
+              entries: {
+                date: new Date().toISOString().split("T")[0],
+                description:
+                  Number(advancePaid) > 0
+                    ? "Employee Salary Advance"
+                    : "Employee Salaries",
+                amount: totalPaidOut,
+              },
+            },
+          },
+          { upsert: true }
+        );
+      }
+    } catch (err) {
+      console.error("Failed to append salary info to expenses:", err);
+    }
+
     return NextResponse.json({ success: true, result });
   } catch (error) {
-    console.error(error);
+    console.error("POST /api/salaries error:", error);
     return NextResponse.json(
       { error: "Failed to create or update salary record" },
       { status: 500 }
@@ -53,6 +142,7 @@ export async function POST(req: Request) {
   }
 }
 
+// ─── UPDATE PAYMENT ────────────────────────────────────────
 export async function PATCH(req: Request) {
   try {
     const body = await req.json();
@@ -65,8 +155,8 @@ export async function PATCH(req: Request) {
     if (!record)
       return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const newPaid = record.paidAmount + payAmount;
-    const newBalance = record.totalSalary - newPaid;
+    const newPaid = Number(record.paidAmount || 0) + Number(payAmount || 0);
+    const newBalance = Number(record.totalSalary || 0) - newPaid;
 
     await db.collection("salaries").updateOne(
       { _id: new ObjectId(id) },
@@ -89,6 +179,7 @@ export async function PATCH(req: Request) {
   }
 }
 
+// ─── FETCH SALARIES ────────────────────────────────────────
 export async function GET(req: Request) {
   try {
     const db = await getDb();

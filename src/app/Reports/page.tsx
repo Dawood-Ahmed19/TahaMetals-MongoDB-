@@ -22,6 +22,7 @@ const Reports = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
+  const [grandTotalExpenses, setGrandTotalExpenses] = useState(0);
   const [netMonthlyProfit, setNetMonthlyProfit] = useState(0);
   const today = new Date();
   const formattedDate = today.toLocaleDateString("en-US", {
@@ -57,10 +58,17 @@ const Reports = () => {
           `/api/reports/monthly-expenses?month=${month}&year=${year}`
         );
         const expData = await expRes.json();
-        if (expData.success) setMonthlyExpenses(expData.totalExpenses);
-        else setMonthlyExpenses(0);
+
+        if (expData.success) {
+          setMonthlyExpenses(expData.monthlyExpenses || 0);
+          setGrandTotalExpenses(expData.grandTotalExpenses || 0);
+        } else {
+          setMonthlyExpenses(0);
+          setGrandTotalExpenses(0);
+        }
       } else {
         setMonthlyExpenses(0);
+        setGrandTotalExpenses(0);
       }
     } catch (err) {
       console.error("Error fetching quotations:", err);
@@ -87,11 +95,11 @@ const Reports = () => {
         (sum, q) => sum + (q.quotationTotalProfit || 0),
         0
       );
-      setNetMonthlyProfit(totalInvoiceProfit - monthlyExpenses);
+      setNetMonthlyProfit(totalInvoiceProfit - grandTotalExpenses);
     } else {
       setNetMonthlyProfit(0);
     }
-  }, [quotations, monthlyExpenses, filterType]);
+  }, [quotations, grandTotalExpenses, filterType]);
 
   return (
     <div className="h-full flex flex-col items-center gap-[30px] px-[40px] py-[30px]">

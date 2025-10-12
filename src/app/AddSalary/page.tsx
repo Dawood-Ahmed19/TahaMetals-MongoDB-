@@ -55,8 +55,11 @@ export default function PaySalaryPage() {
 
   async function fetchSalaryRecords() {
     const url = new URL("/api/salaries", window.location.origin);
-    url.searchParams.append("month", months[selectedMonth]);
-    url.searchParams.append("year", selectedYear.toString());
+    const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(
+      2,
+      "0"
+    )}`;
+    url.searchParams.append("month", monthKey);
 
     const res = await fetch(url);
     if (res.ok) setRecords(await res.json());
@@ -68,27 +71,46 @@ export default function PaySalaryPage() {
   }, [currentPage, searchTerm, selectedMonth, selectedYear]);
 
   async function handlePay(emp: any, monthIndex: number) {
-    const monthName = months[monthIndex];
-    const year = new Date().getFullYear();
+    try {
+      const year = selectedYear;
+      const monthKey = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
 
-    const payload = {
-      employeeId: emp._id,
-      month: monthName,
-      year,
-      totalSalary: emp.monthlySalary,
-      paidAmount: emp.monthlySalary,
-      balanceRemaining: 0,
-      fullyPaid: true,
-      advancePaid: 0,
-    };
+      const existing = records.find(
+        (r) =>
+          r.employeeId === emp._id && r.month === monthKey && r.year === year
+      );
 
-    await fetch("/api/salaries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+      const alreadyAdvance = Number(existing?.advancePaid || 0);
+      const alreadyPaid = Number(existing?.paidAmount || 0);
+      const totalSalary = Number(emp.monthlySalary || 0);
+      const remaining = Math.max(0, totalSalary - alreadyAdvance - alreadyPaid);
 
-    await fetchSalaryRecords();
+      const payload = {
+        employeeId: emp._id,
+        month: monthKey,
+        year,
+        totalSalary,
+        paidAmount: remaining,
+        advancePaid: 0,
+        balanceRemaining: 0,
+        fullyPaid: true,
+      };
+
+      const res = await fetch("/api/salaries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        console.error("Failed to save salary record:", await res.text());
+        return;
+      }
+
+      await fetchSalaryRecords(); // refresh table
+    } catch (err) {
+      console.error("Error paying salary:", err);
+    }
   }
 
   function openAdvanceModal(emp: any) {
@@ -97,25 +119,31 @@ export default function PaySalaryPage() {
     setShowModal(true);
   }
 
-  // ✅ FIXED: Wait for state update before fetching
   async function handleAdvancePayment() {
     if (!advanceAmount || !selectedEmp) return;
 
-    const nextMonth = (selectedMonth + 1) % 12;
-    const monthName = months[nextMonth];
-    const year =
-      nextMonth === 0 && new Date().getMonth() === 11
-        ? new Date().getFullYear() + 1
-        : new Date().getFullYear();
+    // current month/year (for actual cash outflow)
+    const currentMonthKey = `${selectedYear}-${String(
+      selectedMonth + 1
+    ).padStart(2, "0")}`;
 
+    // next month/year (salary record)
+    const nextMonthIndex = (selectedMonth + 1) % 12;
+    const nextYear = nextMonthIndex === 0 ? selectedYear + 1 : selectedYear;
+    const nextMonthKey = `${nextYear}-${String(nextMonthIndex + 1).padStart(
+      2,
+      "0"
+    )}`;
+
+    // amounts
     const adv = Number(advanceAmount);
     const balance =
       adv >= selectedEmp.monthlySalary ? 0 : selectedEmp.monthlySalary - adv;
 
-    const payload = {
+    const salaryPayload = {
       employeeId: selectedEmp._id,
-      month: monthName,
-      year,
+      month: nextMonthKey,
+      year: nextYear,
       totalSalary: selectedEmp.monthlySalary,
       paidAmount: 0,
       advancePaid: adv,
@@ -123,38 +151,58 @@ export default function PaySalaryPage() {
       fullyPaid: balance <= 0,
     };
 
+    const expensePayload = {
+      employeeId: selectedEmp._id,
+      month: currentMonthKey,
+      year: selectedYear,
+      totalSalary: selectedEmp.monthlySalary,
+      paidAmount: adv,
+      advancePaid: 0,
+      balanceRemaining: selectedEmp.monthlySalary - adv,
+      fullyPaid: false,
+    };
+
     await fetch("/api/salaries", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(salaryPayload),
     });
 
-    // ✅ Clean and logically ordered
+    await fetch("/api/salaries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(expensePayload),
+    });
+
     setShowModal(false);
     setAdvanceAmount("");
-    setSelectedMonth(nextMonth);
+    setSelectedMonth(nextMonthIndex);
 
-    // ⏳ Delay 1 frame so React updates month before re-fetch
     setTimeout(() => {
       fetchSalaryRecords();
     }, 150);
   }
 
   const getStatus = (emp: any) => {
-    const monthName = months[selectedMonth];
     const year = selectedYear;
+    const monthKey = `${year}-${String(selectedMonth + 1).padStart(2, "0")}`;
+
     const rec = records.find(
-      (r) =>
-        r.employeeId === emp._id && r.month === monthName && r.year === year
+      (r: any) =>
+        r.employeeId === emp._id && r.month === monthKey && r.year === year
     );
 
     const nextMonthIndex = (selectedMonth + 1) % 12;
-    const nextMonthName = months[nextMonthIndex];
     const nextYear = nextMonthIndex === 0 ? year + 1 : year;
+    const nextMonthKey = `${nextYear}-${String(nextMonthIndex + 1).padStart(
+      2,
+      "0"
+    )}`;
+
     const nextRec = records.find(
-      (r) =>
+      (r: any) =>
         r.employeeId === emp._id &&
-        r.month === nextMonthName &&
+        r.month === nextMonthKey &&
         r.year === nextYear
     );
 

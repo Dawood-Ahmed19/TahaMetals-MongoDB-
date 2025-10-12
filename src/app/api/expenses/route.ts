@@ -1,24 +1,106 @@
+// import { NextResponse } from "next/server";
+// import { getDb } from "@/lib/mongodb";
+
+// const COLLECTION = "expenses";
+
+// // ─── GET ──────────────────────────────────────────────────────
+// export async function GET(req: Request) {
+//   try {
+//     const db = await getDb();
+//     const { searchParams } = new URL(req.url);
+//     const month = searchParams.get("month");
+
+//     // → no month ⇒ return list of distinct months
+//     if (!month) {
+//       const months = await db.collection(COLLECTION).distinct("month");
+//       return NextResponse.json({ success: true, months });
+//     }
+
+//     // → load document for that month
+//     const doc = await db.collection(COLLECTION).findOne({ month });
+//     const entries = doc?.entries || [];
+
+//     // optional: you can still compute salaryTotal separately if you want analytics
+//     // but we do NOT insert any “Employee Salaries” row here.
+
+//     return NextResponse.json({
+//       success: true,
+//       expenses: entries,
+//     });
+//   } catch (err: any) {
+//     console.error("GET /api/expenses", err);
+//     return NextResponse.json(
+//       { success: false, message: err.message },
+//       { status: 500 }
+//     );
+//   }
+// }
+
+// // ─── POST ─────────────────────────────────────────────────────
+// export async function POST(req: Request) {
+//   try {
+//     const db = await getDb();
+//     const { month, entries } = await req.json();
+
+//     if (!month) {
+//       return NextResponse.json(
+//         { success: false, message: "Month is required" },
+//         { status: 400 }
+//       );
+//     }
+
+//     const result = await db.collection(COLLECTION).updateOne(
+//       { month },
+//       {
+//         $set: {
+//           month,
+//           path: `expenses/${month}`,
+//           entries: Array.isArray(entries) ? entries : [],
+//           updatedAt: new Date(),
+//         },
+//         $setOnInsert: { createdAt: new Date() },
+//       },
+//       { upsert: true }
+//     );
+
+//     return NextResponse.json({ success: true, result });
+//   } catch (err: any) {
+//     console.error("POST /api/expenses", err);
+//     return NextResponse.json(
+//       { success: false, message: err.message },
+//       { status: 500 }
+//     );
+//   }
+// }
+
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
+import { getDb } from "@/lib/mongodb";
+
 const COLLECTION = "expenses";
 
+// ─── GET ──────────────────────────────────────────────────────
 export async function GET(req: Request) {
   try {
-    const client = await clientPromise;
-    const db = client.db();
+    const db = await getDb();
     const { searchParams } = new URL(req.url);
     const month = searchParams.get("month");
 
+    // return list of distinct months if none is given
     if (!month) {
       const months = await db.collection(COLLECTION).distinct("month");
       return NextResponse.json({ success: true, months });
     }
 
-    // 1️⃣ fetch stored expense entries
+    // load data for that month
     const doc = await db.collection(COLLECTION).findOne({ month });
-    const currentEntries = doc?.entries || [];
+    const entries = doc?.entries || [];
 
-    // 2️⃣ calculate total salaries actually paid this month
+    // compute current totals to return
+    const monthlyTotal = entries.reduce(
+      (sum: number, e: any) => sum + (Number(e.amount) || 0),
+      0
+    );
+
     const salaryAgg = await db
       .collection("salaries")
       .aggregate([
@@ -28,7 +110,10 @@ export async function GET(req: Request) {
             _id: null,
             totalPaid: {
               $sum: {
-                $add: ["$paidAmount", "$advancePaid"],
+                $add: [
+                  { $toDouble: { $ifNull: ["$paidAmount", 0] } },
+                  { $toDouble: { $ifNull: ["$advancePaid", 0] } },
+                ],
               },
             },
           },
@@ -36,29 +121,20 @@ export async function GET(req: Request) {
       ])
       .toArray();
 
-    const salaryTotal = salaryAgg.length > 0 ? salaryAgg[0].totalPaid : 0;
+    const salariesPaid = salaryAgg.length ? salaryAgg[0].totalPaid : 0;
+    const grandTotal = monthlyTotal + salariesPaid;
 
-    // 3️⃣ update / insert the “Employee Salaries” row
-    const other = currentEntries.filter(
-      (e: any) => e.description !== "Employee Salaries"
-    );
-
-    const salaryRow = {
-      date: new Date().toISOString().split("T")[0],
-      description: "Employee Salaries",
-      amount: salaryTotal,
-    };
-
-    const mergedEntries = [...other, salaryRow];
-
-    // 4️⃣ upsert the merged set back into expenses
+    // ✅ update document with totals so they’re persisted
     await db.collection(COLLECTION).updateOne(
       { month },
       {
         $set: {
           month,
           path: `expenses/${month}`,
-          entries: mergedEntries,
+          entries,
+          monthlyTotal,
+          salariesPaid,
+          grandTotal,
           updatedAt: new Date(),
         },
         $setOnInsert: { createdAt: new Date() },
@@ -68,43 +144,94 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
-      expenses: mergedEntries,
+      month,
+      entries,
+      monthlyTotal,
+      salariesPaid,
+      grandTotal,
     });
   } catch (err: any) {
     console.error("GET /api/expenses", err);
-    return NextResponse.json({ success: false, message: err.message });
+    return NextResponse.json(
+      { success: false, message: err.message },
+      { status: 500 }
+    );
   }
 }
 
+// ─── POST ─────────────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
-    const client = await clientPromise;
-    const db = client.db();
+    const db = await getDb();
     const { month, entries } = await req.json();
 
     if (!month) {
-      return NextResponse.json({
-        success: false,
-        message: "Month is required",
-      });
+      return NextResponse.json(
+        { success: false, message: "Month is required" },
+        { status: 400 }
+      );
     }
 
+    // compute totals before saving
+    const monthlyTotal = Array.isArray(entries)
+      ? entries.reduce(
+          (sum: number, e: any) => sum + (Number(e.amount) || 0),
+          0
+        )
+      : 0;
+
+    const salaryAgg = await db
+      .collection("salaries")
+      .aggregate([
+        { $match: { month } },
+        {
+          $group: {
+            _id: null,
+            totalPaid: {
+              $sum: {
+                $add: [
+                  { $toDouble: { $ifNull: ["$paidAmount", 0] } },
+                  { $toDouble: { $ifNull: ["$advancePaid", 0] } },
+                ],
+              },
+            },
+          },
+        },
+      ])
+      .toArray();
+
+    const salariesPaid = salaryAgg.length ? salaryAgg[0].totalPaid : 0;
+    const grandTotal = monthlyTotal + salariesPaid;
+
     const result = await db.collection(COLLECTION).updateOne(
-      { path: `expenses/${month}` },
+      { month },
       {
         $set: {
           month,
-          path: `expenses/${month}`, // readable key
+          path: `expenses/${month}`,
           entries: Array.isArray(entries) ? entries : [],
+          monthlyTotal,
+          salariesPaid,
+          grandTotal,
           updatedAt: new Date(),
         },
+        $setOnInsert: { createdAt: new Date() },
       },
       { upsert: true }
     );
 
-    return NextResponse.json({ success: true, result });
+    return NextResponse.json({
+      success: true,
+      result,
+      monthlyTotal,
+      salariesPaid,
+      grandTotal,
+    });
   } catch (err: any) {
     console.error("POST /api/expenses", err);
-    return NextResponse.json({ success: false, message: err.message });
+    return NextResponse.json(
+      { success: false, message: err.message },
+      { status: 500 }
+    );
   }
 }

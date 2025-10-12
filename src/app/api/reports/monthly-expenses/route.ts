@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
+import { getDb } from "@/lib/mongodb";
 
 export async function GET(req: Request) {
   try {
@@ -7,27 +7,66 @@ export async function GET(req: Request) {
     const month = searchParams.get("month");
     const year = searchParams.get("year");
 
-    if (!month || !year)
+    if (!month || !year) {
       return NextResponse.json({
         success: false,
         message: "Month and year are required",
       });
+    }
 
-    const client = await clientPromise;
-    const db = client.db();
+    const db = await getDb();
 
+    // key format: YYYY-MM (e.g. "2025-10")
     const key = `${year}-${String(month).padStart(2, "0")}`;
+
+    // 1️⃣  sum up all expense amounts for that month
     const doc = await db.collection("expenses").findOne({ month: key });
-    const totalExpenses = doc
+    const monthlyExpenses = doc?.entries?.length
       ? doc.entries.reduce(
           (sum: number, e: any) => sum + (Number(e.amount) || 0),
           0
         )
       : 0;
 
-    return NextResponse.json({ success: true, totalExpenses });
+    // 2️⃣  total all salaries & advances actually paid for that month
+    const salaryAgg = await db
+      .collection("salaries")
+      .aggregate([
+        { $match: { month: key } },
+        {
+          $group: {
+            _id: null,
+            totalPaid: {
+              // ensure both fields are numeric even if stored as strings
+              $sum: {
+                $add: [
+                  { $toDouble: { $ifNull: ["$paidAmount", 0] } },
+                  { $toDouble: { $ifNull: ["$advancePaid", 0] } },
+                ],
+              },
+            },
+          },
+        },
+      ])
+      .toArray();
+
+    const salariesPaid = salaryAgg.length ? salaryAgg[0].totalPaid : 0;
+
+    // 3️⃣  total outgoing = expenses + salaries
+    const grandTotalExpenses = monthlyExpenses + salariesPaid;
+
+    return NextResponse.json({
+      success: true,
+      month: key,
+      monthlyExpenses, // individual expense total
+      salariesPaid, // total salaries/advances
+      grandTotalExpenses, // combined total for reports
+    });
   } catch (err: any) {
     console.error("Error in /api/reports/monthly-expenses:", err);
-    return NextResponse.json({ success: false, message: err.message });
+    return NextResponse.json(
+      { success: false, message: err.message },
+      { status: 500 }
+    );
   }
 }
