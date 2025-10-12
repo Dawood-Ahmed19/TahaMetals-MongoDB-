@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, id: result.insertedId });
   } catch (error) {
-    console.error(error);
+    console.error("Error adding employee:", error);
     return NextResponse.json(
       { error: "Failed to add employee" },
       { status: 500 }
@@ -24,12 +24,30 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const pageParam = Number(searchParams.get("page") || "1");
+    const search = searchParams.get("search") || "";
+    const limit = 10;
+    const skip = (pageParam - 1) * limit;
+
     const db = await getDb();
-    const employees = await db.collection("employees").find({}).toArray();
-    return NextResponse.json(employees);
+    const collection = db.collection("employees");
+
+    const query = search ? { name: { $regex: search, $options: "i" } } : {};
+
+    const total = await collection.countDocuments(query);
+    const employees = await collection
+      .find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    return NextResponse.json({ employees, total });
   } catch (error) {
+    console.error("Error fetching employees:", error);
     return NextResponse.json(
       { error: "Failed to fetch employees" },
       { status: 500 }

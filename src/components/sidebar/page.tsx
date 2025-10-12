@@ -14,7 +14,7 @@ const AllsideBarPaths = [
   { name: "Rate list", path: "/Ratelist" },
   { name: "Expenses", path: "/Expenses" },
   { name: "Settings", path: "/Settings" },
-  { name: "Salaries", path: "/Salary" },
+  { name: "Employees", path: "/Salary" },
   { name: "Pay Salary", path: "/AddSalary" },
   { name: "Admin", path: "/admin/hardware" },
 ];

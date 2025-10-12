@@ -23,10 +23,20 @@ export default function PaySalaryPage() {
   const [showModal, setShowModal] = useState(false);
   const [selectedEmp, setSelectedEmp] = useState<any>(null);
   const [advanceAmount, setAdvanceAmount] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 10;
 
-  async function fetchEmployees() {
-    const res = await fetch("/api/employees");
-    if (res.ok) setEmployees(await res.json());
+  async function fetchEmployees(page = 1) {
+    const res = await fetch(`/api/employees?page=${page}`);
+    if (res.ok) {
+      const data = await res.json();
+
+      const emps = Array.isArray(data) ? data : data.employees || [];
+      setEmployees(emps);
+
+      if (data.total) setTotalPages(Math.ceil(data.total / limit));
+    }
   }
 
   async function fetchSalaryRecords() {
@@ -35,9 +45,9 @@ export default function PaySalaryPage() {
   }
 
   useEffect(() => {
-    fetchEmployees();
+    fetchEmployees(currentPage);
     fetchSalaryRecords();
-  }, []);
+  }, [currentPage]);
 
   async function handlePay(emp: any, monthIndex: number) {
     const monthName = months[monthIndex];
@@ -103,7 +113,7 @@ export default function PaySalaryPage() {
     setShowModal(false);
     setAdvanceAmount("");
     await fetchSalaryRecords();
-    setSelectedMonth(nextMonth); // switch to next month view
+    setSelectedMonth(nextMonth);
   }
 
   const getStatus = (emp: any) => {
@@ -130,10 +140,7 @@ export default function PaySalaryPage() {
   };
 
   return (
-    <div
-      className="min-h-screen w-full p-8 text-white"
-      style={{ backgroundColor: "var(--color-dashboardBg)" }}
-    >
+    <div className="w-full p-8 text-white">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold text-white">Pay Salaries</h2>
@@ -181,7 +188,9 @@ export default function PaySalaryPage() {
                     className="border-t text-gray-200"
                     style={{ borderColor: "var(--color-cardBg)" }}
                   >
-                    <td className="p-3">{index + 1}</td>
+                    <td className="p-3">
+                      {(currentPage - 1) * limit + index + 1}
+                    </td>
                     <td className="p-3">{emp.name}</td>
                     <td className="p-3">{emp.role}</td>
                     <td className="p-3">{emp.monthlySalary}</td>
@@ -239,6 +248,29 @@ export default function PaySalaryPage() {
             )}
           </tbody>
         </table>
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-4 mt-6">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 rounded-md border border-gray-500 disabled:opacity-30"
+            >
+              Prev
+            </button>
+
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 rounded-md border border-gray-500 disabled:opacity-30"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Advance Salary Modal */}
