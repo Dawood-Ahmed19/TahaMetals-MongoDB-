@@ -88,12 +88,22 @@ export async function PATCH(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const db = await getDb();
+    const { searchParams } = new URL(req.url);
+
+    const month = searchParams.get("month");
+    const year = searchParams.get("year");
+
+    const match: any = {};
+    if (month) match.month = month;
+    if (year) match.year = Number(year);
+
     const salaries = await db
       .collection("salaries")
       .aggregate([
+        { $match: match },
         {
           $lookup: {
             from: "employees",
