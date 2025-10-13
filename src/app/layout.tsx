@@ -1,6 +1,7 @@
 "use client";
 
 import Sidebar from "@/components/sidebar/page";
+import StartupModal from "@/components/StartupModal/page";
 import "./globals.css";
 import { usePathname } from "next/navigation";
 
@@ -24,6 +25,8 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="bg-BgColor font-poppins">
+        <StartupModal />
+
         <div className="flex">
           {!hideSidebar && <Sidebar />}
           <main className="flex-1">{children}</main>
