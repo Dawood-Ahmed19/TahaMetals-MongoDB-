@@ -16,6 +16,7 @@
     "@reduxjs/toolkit": "^2.8.2",
     "bcrypt": "^6.0.0",
     "framer-motion": "^12.23.12",
+    "jose": "^6.1.0",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.2",
     "jspdf-autotable": "^5.0.2",
