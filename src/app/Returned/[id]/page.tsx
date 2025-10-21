@@ -95,7 +95,7 @@ export default function ReturnPage({
             }}
             className="mb-4 ml-3 px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700"
           >
-            Print Return
+            Print Invoice
           </button>
 
           <h1 className="text-2xl font-bold mb-2 text-center text-white">
