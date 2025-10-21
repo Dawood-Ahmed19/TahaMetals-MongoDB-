@@ -225,6 +225,7 @@ export const generateInvoicePDF = async (quotationId: string) => {
     const quotation: Quotation = data.quotation;
     const items = quotation.items || [];
 
+    // === Fetch Inventory (for better item display) ===
     const inventoryRes = await fetch("/api/inventory");
     if (!inventoryRes.ok) {
       console.error("❌ Failed to fetch inventory:", await inventoryRes.text());
@@ -241,7 +242,7 @@ export const generateInvoicePDF = async (quotationId: string) => {
       const invItem = inventoryItems.find((inv: any) => inv.name === itemName);
       if (invItem) {
         if (invItem.type.toLowerCase().includes("pillar")) {
-          return `${invItem.type} ${invItem.size ? invItem.size : ""}${
+          return `${invItem.type} ${invItem.size || ""}${
             invItem.gote &&
             invItem.gote.trim() !== "" &&
             invItem.gote.toLowerCase() !== "without gote"
@@ -249,11 +250,11 @@ export const generateInvoicePDF = async (quotationId: string) => {
               : ""
           } - ${invItem.guage || ""}`.trim();
         } else if (invItem.type.toLowerCase() === "hardware") {
-          return `${invItem.name} ${invItem.size ? invItem.size : ""}${
+          return `${invItem.name} ${invItem.size || ""}${
             invItem.color && invItem.color.trim() !== "" ? invItem.color : ""
           }`.trim();
         } else {
-          return `${invItem.type}${invItem.size ? invItem.size : ""}${
+          return `${invItem.type}${invItem.size || ""}${
             invItem.guage || ""
           }`.trim();
         }
@@ -261,9 +262,9 @@ export const generateInvoicePDF = async (quotationId: string) => {
       return itemName;
     };
 
-    // ==== PAGE SETUP ====
+    // === Page Setup (80mm Thermal) ===
     const pageWidth = 226.77; // 80mm
-    const pageHeight = 566.93; // 200mm
+    const pageHeight = 566.93; // ~200mm
     const printableWidth = 178.58; // 63mm
     const leftMargin = (pageWidth - printableWidth) / 2;
     const rightMargin = leftMargin;
@@ -273,36 +274,49 @@ export const generateInvoicePDF = async (quotationId: string) => {
       format: [pageWidth, pageHeight],
     });
 
-    // ==== HEADER ====
-    const brandX = leftMargin;
-    const brandY = 30;
     const rightX = pageWidth - rightMargin;
 
-    doc.setFontSize(13).setFont("helvetica", "bold").setTextColor(0, 0, 0);
-    doc.text("Taha", brandX, brandY);
-    const tahaWidth = (doc as any).getTextWidth("Taha");
-    doc.text("Metals", brandX + tahaWidth + 6, brandY);
+    // === Helper: Add Header (on each page) ===
+    const addHeader = (pageNum: number) => {
+      const brandY = 30;
+      doc.setFontSize(13).setFont("helvetica", "bold").setTextColor(0, 0, 0);
+      doc.text("Taha", leftMargin, brandY);
+      const tahaWidth = (doc as any).getTextWidth("Taha");
+      doc.text("Metals", leftMargin + tahaWidth + 6, brandY);
 
-    doc.setFontSize(9).setFont("helvetica", "normal");
-    doc.text("Invoice / Quotation", brandX, brandY + 12);
+      doc.setFontSize(9).setFont("helvetica", "normal");
+      doc.text("Invoice / Quotation", leftMargin, brandY + 12);
 
-    const today = new Date(quotation.date).toLocaleDateString();
-    doc
-      .setFontSize(8)
-      .text(`Date: ${today}`, rightX, brandY, { align: "right" });
-
-    if (quotation.quotationId) {
+      const today = new Date(quotation.date).toLocaleDateString();
       doc
         .setFontSize(8)
-        .setFont("helvetica", "bold")
-        .setTextColor(100)
-        .text(`Quotation ID: ${quotation.quotationId}`, rightX, brandY + 10, {
-          align: "right",
-        })
-        .setTextColor(0);
-    }
+        .text(`Date: ${today}`, rightX, brandY, { align: "right" });
 
-    // ==== TABLE ====
+      const idSuffix = pageNum > 1 ? ` (${pageNum})` : "";
+      if (quotation.quotationId) {
+        doc
+          .setFontSize(8)
+          .setFont("helvetica", "bold")
+          .setTextColor(100)
+          .text(
+            `Quotation ID: ${quotation.quotationId}${idSuffix}`,
+            rightX,
+            brandY + 10,
+            { align: "right" }
+          )
+          .setTextColor(0);
+      }
+    };
+
+    // === Helper: Add Footer (on each page) ===
+    const addFooter = () => {
+      doc
+        .setFont("helvetica", "normal")
+        .setFontSize(8)
+        .text("Thank you for purchasing!", leftMargin, pageHeight - 25);
+    };
+
+    // === Table Head / Body ===
     const head = [["Qty", "Item", "Guage", "Weight", "Rate", "Amount"]];
     const body = items.map((r: any) => [
       String(r.qty),
@@ -313,6 +327,10 @@ export const generateInvoicePDF = async (quotationId: string) => {
       Number(r.amount).toLocaleString("en-US", { maximumFractionDigits: 2 }),
     ]);
 
+    // === Draw Table with Pagination ===
+    let pageNum = 1;
+    addHeader(pageNum);
+
     (autoTable as any)(doc, {
       head,
       body,
@@ -322,67 +340,70 @@ export const generateInvoicePDF = async (quotationId: string) => {
       headStyles: { fillColor: [45, 55, 72], textColor: 255 },
       margin: { left: leftMargin, right: rightMargin },
       tableWidth: printableWidth,
+      didDrawPage: (data: any) => {
+        addFooter();
+
+        if (pageNum < doc.getNumberOfPages()) {
+          pageNum++;
+          addHeader(pageNum);
+        }
+      },
     });
 
-    // ==== TOTALS ====
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    // === Totals Only on Last Page ===
+    doc.setPage(doc.getNumberOfPages());
+    let finalY = (doc as any).lastAutoTable.finalY + 10;
+
     const paid =
       quotation.payments?.reduce((sum: number, p: any) => sum + p.amount, 0) ||
       0;
     const balance = quotation.grandTotal - paid;
 
-    let yPos = finalY;
     const labelX = leftMargin;
     const valueX = rightX;
-
-    doc.setFontSize(8.5).setFont("helvetica", "normal");
     const lineGap = 11;
 
-    doc.text(`Total:`, labelX, yPos);
-    doc.text(`${quotation.total.toLocaleString()}`, valueX, yPos, {
-      align: "right",
-    });
-    yPos += lineGap;
+    doc.setFontSize(8.5).setFont("helvetica", "normal");
 
-    doc.text(`Discount:`, labelX, yPos);
-    doc.text(`${quotation.discount.toLocaleString()}`, valueX, yPos, {
+    doc.text(`Total:`, labelX, finalY);
+    doc.text(`${quotation.total.toLocaleString()}`, valueX, finalY, {
       align: "right",
     });
-    yPos += lineGap;
+    finalY += lineGap;
+
+    doc.text(`Discount:`, labelX, finalY);
+    doc.text(`${quotation.discount.toLocaleString()}`, valueX, finalY, {
+      align: "right",
+    });
+    finalY += lineGap;
 
     if (
       quotation.hasOwnProperty("loading") &&
       quotation.loading !== undefined &&
       quotation.loading !== null
     ) {
-      doc.text(`Loading:`, labelX, yPos);
-      doc.text(`${quotation.loading.toLocaleString()}`, valueX, yPos, {
+      doc.text(`Loading:`, labelX, finalY);
+      doc.text(`${quotation.loading.toLocaleString()}`, valueX, finalY, {
         align: "right",
       });
-      yPos += lineGap;
+      finalY += lineGap;
     }
 
-    doc.text(`Paid:`, labelX, yPos);
-    doc.text(`${paid.toLocaleString()}`, valueX, yPos, { align: "right" });
-    yPos += lineGap;
+    doc.text(`Paid:`, labelX, finalY);
+    doc.text(`${paid.toLocaleString()}`, valueX, finalY, { align: "right" });
+    finalY += lineGap;
 
     doc.setFont("helvetica", "bold");
-    doc.text(`Balance:`, labelX, yPos);
-    doc.text(`${balance.toLocaleString()}`, valueX, yPos, { align: "right" });
-    yPos += lineGap;
+    doc.text(`Balance:`, labelX, finalY);
+    doc.text(`${balance.toLocaleString()}`, valueX, finalY, { align: "right" });
+    finalY += lineGap;
 
-    doc.text(`Grand Total:`, labelX, yPos);
-    doc.text(`${quotation.grandTotal.toLocaleString()}`, valueX, yPos, {
+    doc.text(`Grand Total:`, labelX, finalY);
+    doc.text(`${quotation.grandTotal.toLocaleString()}`, valueX, finalY, {
       align: "right",
     });
 
-    // ==== FOOTER ====
-    doc
-      .setFont("helvetica", "normal")
-      .setFontSize(8)
-      .text("Thank you for purchasing!", leftMargin, pageHeight - 25);
-
-    // ==== SAVE ====
+    // === Save ===
     const filename = `invoice_${quotation.quotationId || quotation._id}.pdf`;
     doc.save(filename);
   } catch (err) {

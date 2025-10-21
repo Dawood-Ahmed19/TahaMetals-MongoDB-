@@ -249,7 +249,7 @@ export const printReturnPDF = async (returnId: string) => {
 
     const rtn: ReturnRecord = data.returnRecord;
 
-    // Normalize schema variations
+    // === Normalize item schema ===
     const items: ReturnItem[] = Array.isArray(rtn.itemsReturned)
       ? rtn.itemsReturned
       : rtn.itemReturned
@@ -300,7 +300,7 @@ export const printReturnPDF = async (returnId: string) => {
       return itemName;
     };
 
-    // === Create 80mm PDF ===
+    // === PDF setup (80mm) ===
     const pageWidth = 226.77; // 80mm
     const pageHeight = 566.93; // ~200mm
     const printableWidth = 178.58; // 63mm safe zone
@@ -311,45 +311,51 @@ export const printReturnPDF = async (returnId: string) => {
       format: [pageWidth, pageHeight],
     });
 
-    const brandY = 30;
-    const rightX = pageWidth - leftMargin;
-
-    // === Header ===
-    doc.setFont("helvetica", "bold").setFontSize(14);
-    doc.text("Taha", leftMargin, brandY);
-    const tahaWidth = (doc as any).getTextWidth("Taha");
-    doc.text("Metals", leftMargin + tahaWidth + 6, brandY);
-
-    doc.setFont("helvetica", "normal").setFontSize(8);
-    doc.text("Return Invoice", leftMargin, brandY + 14);
-
     const today = new Date(rtn.createdAt).toLocaleDateString();
 
-    doc
-      .setFont("helvetica", "normal")
-      .setFontSize(7)
-      .text(`Date: ${today}`, rightX, brandY, { align: "right" });
+    // === Header generator ===
+    const addHeader = (pageNumber: number) => {
+      const brandY = 30;
+      const rightX = pageWidth - leftMargin;
 
-    doc
-      .setFont("helvetica", "bold")
-      .setFontSize(7)
-      .setTextColor(107, 114, 128)
-      .text(`Return ID: ${rtn.returnId}`, rightX, brandY + 10, {
-        align: "right",
-      })
-      .text(`Ref Invoice: ${rtn.referenceInvoice}`, rightX, brandY + 20, {
-        align: "right",
-      })
-      .setTextColor(0, 0, 0);
+      doc.setFont("helvetica", "bold").setFontSize(14);
+      doc.text("Taha", leftMargin, brandY);
+      const tahaWidth = (doc as any).getTextWidth("Taha");
+      doc.text("Metals", leftMargin + tahaWidth + 6, brandY);
 
-    if (rtn.customerName) {
+      doc.setFont("helvetica", "normal").setFontSize(8);
+      doc.text("Return Invoice", leftMargin, brandY + 14);
+
+      doc
+        .setFont("helvetica", "normal")
+        .setFontSize(7)
+        .text(`Date: ${today}`, rightX, brandY, { align: "right" });
+
+      // Add (2), (3) etc. suffix if page > 1
+      const returnIdText =
+        pageNumber > 1 ? `${rtn.returnId} (${pageNumber})` : `${rtn.returnId}`;
+
       doc
         .setFont("helvetica", "bold")
-        .setFontSize(8)
-        .text(`Customer: ${rtn.customerName}`, leftMargin, brandY + 30);
-    }
+        .setFontSize(7)
+        .setTextColor(107, 114, 128)
+        .text(`Return ID: ${returnIdText}`, rightX, brandY + 10, {
+          align: "right",
+        })
+        .text(`Ref Invoice: ${rtn.referenceInvoice}`, rightX, brandY + 20, {
+          align: "right",
+        })
+        .setTextColor(0, 0, 0);
 
-    // === Table ===
+      if (rtn.customerName) {
+        doc
+          .setFont("helvetica", "bold")
+          .setFontSize(8)
+          .text(`Customer: ${rtn.customerName}`, leftMargin, brandY + 30);
+      }
+    };
+
+    // === Table head & body ===
     const head = [["Qty", "Item", "Wt", "Rate", "Refund"]];
     const body = items.map((it) => [
       String(it.qty),
@@ -363,6 +369,10 @@ export const printReturnPDF = async (returnId: string) => {
       })}`,
     ]);
 
+    // === Draw first header ===
+    addHeader(1);
+
+    // === AutoTable with pagination handling ===
     (autoTable as any)(doc, {
       head,
       body,
@@ -372,15 +382,14 @@ export const printReturnPDF = async (returnId: string) => {
       headStyles: { fillColor: [45, 55, 72], textColor: 255, fontSize: 7 },
       margin: { left: leftMargin, right: leftMargin },
       tableWidth: printableWidth,
+      didDrawPage: (data: any) => {
+        const pageNumber = doc.getNumberOfPages();
+        if (pageNumber > 1) addHeader(pageNumber);
+      },
     });
 
     // === Totals ===
-    let finalY = (doc as any).lastAutoTable.finalY + 20;
-    if (finalY + 60 > pageHeight) {
-      doc.addPage();
-      finalY = 40;
-    }
-
+    const finalY = (doc as any).lastAutoTable.finalY + 20;
     const rightXTotal = pageWidth - leftMargin;
     const labelX = rightXTotal - 80;
 
