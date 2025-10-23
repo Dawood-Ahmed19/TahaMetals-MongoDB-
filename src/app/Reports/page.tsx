@@ -2,7 +2,7 @@
 
 import { printMonthlyReport } from "@/utils/printReports";
 import { useEffect, useState } from "react";
-
+import { useRouter } from "next/navigation";
 interface Quotation {
   _id: string;
   quotationId: string;
@@ -13,6 +13,7 @@ interface Quotation {
 }
 
 const Reports = () => {
+  const router = useRouter();
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 15;
@@ -31,6 +32,53 @@ const Reports = () => {
     month: "long",
     day: "numeric",
   });
+
+  const handlePrintAndSave = async () => {
+    // call your existing printer first
+    printMonthlyReport(
+      month,
+      year,
+      quotations.map((q) => ({
+        date: q.date,
+        quotationId: q.quotationId,
+        grandTotal: q.grandTotal,
+        profit: q.quotationTotalProfit || 0,
+      })),
+      quotations.reduce((s, q) => s + q.grandTotal, 0),
+      quotations.reduce((s, q) => s + (q.quotationTotalProfit || 0), 0),
+      netMonthlyProfit,
+      monthlyExpenses
+    );
+
+    // then send data to backend to store summary
+    try {
+      const res = await fetch("/api/reports/save-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          month,
+          year,
+          totalSales: quotations.reduce((s, q) => s + q.grandTotal, 0),
+          totalProfit: quotations.reduce(
+            (s, q) => s + (q.quotationTotalProfit || 0),
+            0
+          ),
+          monthlyExpenses,
+          grandTotalExpenses,
+          netMonthlyProfit,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        console.log("✅ Saved to reportsSummary collection.");
+      } else {
+        console.warn("⚠️ Save summary failed:", data.message);
+      }
+    } catch (err) {
+      console.error("❌ Error saving summary:", err);
+    }
+  };
 
   const fetchQuotations = async () => {
     try {
@@ -184,28 +232,10 @@ const Reports = () => {
         {filterType === "monthly" && quotations.length > 0 && (
           <div className="flex justify-end mt-4">
             <button
-              onClick={() =>
-                printMonthlyReport(
-                  month,
-                  year,
-                  quotations.map((q) => ({
-                    date: q.date,
-                    quotationId: q.quotationId,
-                    grandTotal: q.grandTotal,
-                    profit: q.quotationTotalProfit || 0,
-                  })),
-                  quotations.reduce((s, q) => s + q.grandTotal, 0),
-                  quotations.reduce(
-                    (s, q) => s + (q.quotationTotalProfit || 0),
-                    0
-                  ),
-                  netMonthlyProfit,
-                  monthlyExpenses
-                )
-              }
+              onClick={handlePrintAndSave}
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium"
             >
-              Print Report
+              Print Report
             </button>
           </div>
         )}
@@ -223,29 +253,32 @@ const Reports = () => {
                 <th className="border border-gray-600 p-3">Profit</th>
               </tr>
             </thead>
+
             <tbody>
               {paginatedData.length > 0 ? (
                 <>
                   {paginatedData.map((q) => (
                     <tr
                       key={q._id}
-                      className="text-center text-sm hover:bg-gray-700"
+                      onClick={() => router.push(`/Reports/${q._id}`)} // ← client navigation
+                      className="text-center text-sm hover:bg-gray-700 cursor-pointer transition-colors"
                     >
                       <td className="border border-gray-700 p-2">
                         {new Date(q.date).toLocaleDateString()}
                       </td>
-                      <td className="border border-gray-700 p-2">
+                      <td className="border border-gray-700 p-2 text-blue-400 underline">
                         {q.quotationId}
                       </td>
                       <td className="border border-gray-700 p-2">
-                        {q.grandTotal.toLocaleString("en-US")} Rs
+                        {q.grandTotal.toLocaleString("en-US")} Rs
                       </td>
                       <td className="border border-gray-700 p-2 text-green-400 font-semibold">
-                        {q.quotationTotalProfit?.toLocaleString("en-US") || 0}{" "}
-                        Rs
+                        {q.quotationTotalProfit?.toLocaleString("en-US") || 0}
+                         Rs
                       </td>
                     </tr>
                   ))}
+
                   {/* Totals */}
                   <tr className="bg-gray-800 font-bold text-center text-sm">
                     <td
@@ -255,13 +288,14 @@ const Reports = () => {
                       Totals:
                     </td>
                     <td className="border border-gray-700 p-2">
-                      {totalAmount.toLocaleString("en-US")} Rs
+                      {totalAmount.toLocaleString("en-US")} Rs
                     </td>
                     <td className="border border-gray-700 p-2 text-green-400">
-                      {netProfit.toLocaleString("en-US")} Rs
+                      {netProfit.toLocaleString("en-US")} Rs
                     </td>
                   </tr>
 
+                  {/* Monthly net profit */}
                   {filterType === "monthly" && (
                     <tr className="bg-gray-800 font-bold text-center text-sm">
                       <td
@@ -285,7 +319,7 @@ const Reports = () => {
                             : "text-red-400"
                         }`}
                       >
-                        {netMonthlyProfit.toLocaleString("en-US")} Rs
+                        {netMonthlyProfit.toLocaleString("en-US")} Rs
                       </td>
                     </tr>
                   )}

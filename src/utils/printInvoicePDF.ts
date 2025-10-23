@@ -279,31 +279,29 @@ export const printInvoicePDF = async (quotationId: string) => {
       }`.trim();
     };
 
-    // === Setup 80mm thermal page ===
-    const pageWidth = 226.77; // 80mm
-    const pageHeight = 566.93; // ~200mm
-    const printableWidth = 178.58;
-    const leftMargin = (pageWidth - printableWidth) / 2;
-    const rightX = pageWidth - leftMargin;
+    // === Page layout (80mm roll, content width = 70mm) ===
+    const pageWidth = 226.77; // 80 mm in points
+    const printableWidth = 198.43; // 70 mm in points
+    const marginX = (pageWidth - printableWidth) / 2; // ≈ 14.17 pt (~5 mm) each side
+    const rightX = marginX + printableWidth;
+    const pageHeight = 566.93; // ~200 mm roll height
 
     const doc = new jsPDF({
       unit: "pt",
       format: [pageWidth, pageHeight],
     });
 
-    // === Header generator (used per page) ===
+    // === Header (company name left-aligned) ===
     const drawHeader = (pageNum?: number) => {
       const y = 25;
       const qid =
         quotation.quotationId + (pageNum && pageNum > 1 ? ` (${pageNum})` : "");
 
       doc.setFont("helvetica", "bold").setFontSize(11);
-      doc.text("Taha", leftMargin, y);
-      const tahaW = (doc as any).getTextWidth("Taha");
-      doc.text("Metals", leftMargin + tahaW + 5, y);
+      doc.text("Taha Metals", marginX, y);
 
       doc.setFont("helvetica", "normal").setFontSize(7);
-      doc.text("Invoice / Quotation", leftMargin, y + 12);
+      doc.text("Invoice / Quotation", marginX, y + 12);
 
       const date = new Date(quotation.date).toLocaleDateString();
       doc.text(`Date: ${date}`, rightX, y, { align: "right" });
@@ -319,12 +317,11 @@ export const printInvoicePDF = async (quotationId: string) => {
         doc
           .setFont("helvetica", "bold")
           .setFontSize(8)
-          .text(`Customer: ${quotation.customerName}`, leftMargin, y + 22);
+          .text(`Customer: ${quotation.customerName}`, marginX, y + 22);
 
       return y + 30;
     };
 
-    // === Start first page ===
     let startY = drawHeader();
 
     // === Table ===
@@ -343,23 +340,31 @@ export const printInvoicePDF = async (quotationId: string) => {
       body,
       startY,
       theme: "grid",
-      styles: { fontSize: 7, cellPadding: 2, lineColor: [220, 220, 220] },
-      headStyles: { fillColor: [45, 55, 72], textColor: 255, fontSize: 7 },
-      columnStyles: {
-        0: { cellWidth: 20 },
-        1: { cellWidth: 60 },
-        2: { cellWidth: 30 },
-        3: { cellWidth: 35 },
-        4: { cellWidth: 30 },
-        5: { cellWidth: 40 },
+      styles: {
+        fontSize: 7,
+        cellPadding: 2,
+        lineColor: [220, 220, 220],
+        overflow: "linebreak",
       },
-      margin: { left: leftMargin, right: leftMargin },
+      headStyles: {
+        fillColor: [45, 55, 72],
+        textColor: 255,
+        fontSize: 6.5, // slightly smaller header font
+        halign: "center",
+        valign: "middle",
+      },
+      columnStyles: {
+        0: { cellWidth: 22, halign: "center" },
+        1: { cellWidth: 70 },
+        2: { cellWidth: 22, halign: "center" },
+        3: { cellWidth: 27, halign: "right" },
+        4: { cellWidth: 27, halign: "right" },
+        5: { cellWidth: 30, halign: "right" },
+      },
+      margin: { left: marginX, right: marginX },
       tableWidth: printableWidth,
       didDrawPage: (data: any) => {
-        // Draw header for new pages (pageNum > 1)
-        if (data.pageNumber > 1) {
-          drawHeader(data.pageNumber);
-        }
+        if (data.pageNumber > 1) drawHeader(data.pageNumber);
       },
     });
 
@@ -370,12 +375,12 @@ export const printInvoicePDF = async (quotationId: string) => {
       finalY = drawHeader((doc as any).internal.getNumberOfPages()) + 10;
     }
 
-    const labelX = rightX - 100;
     const paid =
       quotation.payments?.reduce((sum: number, p: any) => sum + p.amount, 0) ||
       0;
     const balance = quotation.grandTotal - paid;
 
+    const labelX = rightX - 100;
     const drawRow = (label: string, value: number | string, bold = false) => {
       doc.setFont("helvetica", bold ? "bold" : "normal").setFontSize(8);
       doc.text(`${label}:`, labelX, finalY, { align: "left" });
@@ -394,7 +399,12 @@ export const printInvoicePDF = async (quotationId: string) => {
     doc
       .setFont("helvetica", "normal")
       .setFontSize(7)
-      .text("Thank you for purchasing!", leftMargin, pageHeight - 25);
+      .text(
+        "Thank you for purchasing!",
+        marginX + printableWidth / 2,
+        pageHeight - 25,
+        { align: "center" }
+      );
 
     // === Print ===
     const pdfBlob = doc.output("blob");
