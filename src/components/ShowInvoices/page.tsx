@@ -31,6 +31,7 @@ const ShowInvoices = () => {
   const [newPayment, setNewPayment] = useState({ amount: 0, date: "" });
   const [filterOption, setFilterOption] = useState("All");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
   const getReceived = (q: Quotation): number =>
@@ -67,11 +68,18 @@ const ShowInvoices = () => {
 
   const handleAddPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!addPaymentFor?._id) return;
+    if (isSubmitting) return; //  🟢 Prevent double‑click
+    setIsSubmitting(true);
+
+    if (!addPaymentFor?._id) {
+      setIsSubmitting(false);
+      return;
+    }
 
     const balance = getBalance(addPaymentFor);
     if (newPayment.amount > balance) {
-      setErrorMessage("You can't add more amount than Balance remaining");
+      setErrorMessage("You can't add more amount than balance remaining");
+      setIsSubmitting(false);
       return;
     }
     setErrorMessage("");
@@ -103,9 +111,10 @@ const ShowInvoices = () => {
       } else {
         setErrorMessage("Invalid server response");
       }
-    } catch (err) {
+    } catch {
       setErrorMessage("An error occurred while adding payment");
     } finally {
+      setIsSubmitting(false);
       setAddPaymentFor(null);
       setNewPayment({ amount: 0, date: "" });
     }
@@ -319,9 +328,12 @@ const ShowInvoices = () => {
               )}
               <button
                 type="submit"
-                className="bg-green-500 text-white px-3 py-1 rounded"
+                disabled={isSubmitting}
+                className={`bg-green-500 text-white px-3 py-1 rounded ${
+                  isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
-                Save
+                {isSubmitting ? "Saving..." : "Save"}
               </button>
             </form>
             <button
