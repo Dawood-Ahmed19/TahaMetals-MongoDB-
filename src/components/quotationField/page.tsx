@@ -254,9 +254,9 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
         let rate = 0;
 
         if (isPlate) {
-          qty = 0; // not used
-          weight = 0; // will be entered manually
-          rate = ratePerKg;
+          qty = 0;
+          weight = 0;
+          rate = Math.round(ratePerKg); // ✅ round here
         } else {
           qty =
             newRows[index].qty && newRows[index].qty > 0
@@ -275,7 +275,7 @@ const QuotationTable: React.FC<{ onSaveSuccess?: () => void }> = ({
             weight = singleWeight * qty;
           }
 
-          rate = ratePerUnit;
+          rate = Math.round(ratePerUnit); // ✅ round here too
         }
 
         newRows[index] = {

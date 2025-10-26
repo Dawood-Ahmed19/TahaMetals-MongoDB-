@@ -1,191 +1,3 @@
-// import jsPDF from "jspdf";
-// import autoTable from "jspdf-autotable";
-
-// interface Payment {
-//   amount: number;
-//   date: string;
-// }
-
-// interface Quotation {
-//   _id: string;
-//   quotationId: string;
-//   date: string;
-//   total: number;
-//   discount: number;
-//   loading?: number;
-//   grandTotal: number;
-//   payments?: Payment[];
-//   items?: any[];
-// }
-
-// export const generateInvoicePDF = async (quotationId: string) => {
-//   try {
-//     const res = await fetch(`/api/quotations/${quotationId}`);
-
-//     if (!res.ok) {
-//       const text = await res.text();
-//       console.error("❌ API returned non-OK:", text);
-//       alert("Failed to fetch quotation data for PDF.");
-//       return;
-//     }
-
-//     const data = await res.json();
-//     if (!data.success || !data.quotation?.items) {
-//       console.error("❌ Invalid JSON:", data);
-//       alert("No items found for this quotation.");
-//       return;
-//     }
-
-//     const quotation: Quotation = data.quotation;
-//     const items = quotation.items || [];
-
-//     const inventoryRes = await fetch("/api/inventory");
-//     if (!inventoryRes.ok) {
-//       console.error("❌ Failed to fetch inventory:", await inventoryRes.text());
-//       alert("Failed to fetch inventory data for PDF.");
-//       return;
-//     }
-//     const inventoryData = await inventoryRes.json();
-//     const inventoryItems = inventoryData.success
-//       ? inventoryData.items || []
-//       : [];
-
-//     const getDisplayItem = (itemName: string) => {
-//       const invItem = inventoryItems.find((inv: any) => inv.name === itemName);
-//       if (invItem) {
-//         if (invItem.type.toLowerCase().includes("pillar")) {
-//           return `${invItem.type} ${invItem.size ? invItem.size : ""}${
-//             invItem.gote &&
-//             invItem.gote.trim() !== "" &&
-//             invItem.gote.toLowerCase() !== "without gote"
-//               ? invItem.gote
-//               : ""
-//           } - ${invItem.guage || ""}`.trim();
-//         } else if (invItem.type.toLowerCase() === "hardware") {
-//           return `${invItem.name} ${invItem.size ? invItem.size : ""}${
-//             invItem.color && invItem.color.trim() !== "" ? invItem.color : ""
-//           }`.trim();
-//         } else {
-//           return `${invItem.type}${invItem.size ? invItem.size : ""}${
-//             invItem.guage || ""
-//           }`.trim();
-//         }
-//       }
-//       return itemName;
-//     };
-
-//     const doc = new jsPDF({
-//       unit: "pt",
-//       format: "a5",
-//     });
-//     const brandX = 40,
-//       brandY = 30;
-
-//     doc.setFontSize(18).setFont("helvetica", "bold").setTextColor(0, 0, 0);
-//     doc.text("Taha", brandX, brandY);
-//     const tahaWidth = (doc as any).getTextWidth("Taha");
-//     doc.setTextColor(0, 0, 0);
-//     doc.text("Metals", brandX + tahaWidth + 6, brandY);
-
-//     doc.setFontSize(11).setFont("helvetica", "normal");
-//     doc.text("Invoice / Quotation", brandX, brandY + 18);
-
-//     const pageWidth = doc.internal.pageSize.getWidth();
-//     const rightX = pageWidth - 50;
-//     const today = new Date(quotation.date).toLocaleDateString();
-//     doc
-//       .setFontSize(10)
-//       .text(`Date: ${today}`, rightX, brandY, { align: "right" });
-
-//     if (quotation.quotationId) {
-//       doc
-//         .setFontSize(9)
-//         .setFont("helvetica", "bold")
-//         .setTextColor(107, 114, 128);
-//       doc.text(`Quotation ID: ${quotation.quotationId}`, rightX, brandY + 15, {
-//         align: "right",
-//       });
-//       doc.setTextColor(0, 0, 0);
-//     }
-
-//     // Table
-//     const head = [["Qty", "Item", "Guage", "Weight", "Rate", "Amount"]];
-//     const body = items.map((r: any) => [
-//       String(r.qty),
-//       getDisplayItem(r.item),
-//       r.guage || "",
-//       Number(r.weight).toLocaleString("en-US", { maximumFractionDigits: 2 }),
-//       Number(r.rate).toLocaleString("en-US"),
-//       Number(r.amount).toLocaleString("en-US", { maximumFractionDigits: 2 }),
-//     ]);
-
-//     (autoTable as any)(doc, {
-//       head,
-//       body,
-//       startY: 100,
-//       theme: "striped",
-//       styles: { fontSize: 10 },
-//       headStyles: { fillColor: [45, 55, 72], textColor: 255 },
-//       margin: { left: 40, right: 40 },
-//     });
-
-//     // Totals
-//     const finalY = (doc as any).lastAutoTable.finalY + 20;
-//     const rightXTotal = pageWidth - 160;
-//     const paid =
-//       quotation.payments?.reduce((sum: number, p: any) => sum + p.amount, 0) ||
-//       0;
-//     const balance = quotation.grandTotal - paid;
-
-//     doc.setFontSize(11);
-
-//     let yPos = finalY;
-
-//     doc.text(`TOTAL: ${quotation.total.toLocaleString()}`, rightXTotal, yPos);
-//     yPos += 16;
-
-//     doc.text(
-//       `DISCOUNT: ${quotation.discount.toLocaleString()}`,
-//       rightXTotal,
-//       yPos
-//     );
-//     yPos += 16;
-
-//     doc.text(`BALANCE: ${balance.toLocaleString()}`, rightXTotal, yPos);
-//     yPos += 16;
-
-//     if (
-//       quotation.hasOwnProperty("loading") &&
-//       quotation.loading !== undefined &&
-//       quotation.loading !== null
-//     ) {
-//       doc.text(
-//         `LOADING: ${quotation.loading.toLocaleString()}`,
-//         rightXTotal,
-//         yPos
-//       );
-//       yPos += 16;
-//     }
-
-//     doc.text(
-//       `GRAND TOTAL: ${quotation.grandTotal.toLocaleString()}`,
-//       rightXTotal,
-//       yPos
-//     );
-
-//     doc
-//       .setFontSize(10)
-//       .text("Thank you for Purchasing!", 40, doc.internal.pageSize.height - 40);
-
-//     // Save
-//     const filename = `invoice_${quotation.quotationId || quotation._id}.pdf`;
-//     doc.save(filename);
-//   } catch (err) {
-//     console.error("Error generating PDF:", err);
-//     alert("❌ Failed to generate PDF");
-//   }
-// };
-
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -208,30 +20,20 @@ interface Quotation {
 
 export const generateInvoicePDF = async (quotationId: string) => {
   try {
+    // === Fetch quotation data ===
     const res = await fetch(`/api/quotations/${quotationId}`);
-    if (!res.ok) {
-      console.error("❌ API returned non-OK:", await res.text());
-      alert("Failed to fetch quotation data for PDF.");
-      return;
-    }
+    if (!res.ok) throw new Error(await res.text());
 
     const data = await res.json();
-    if (!data.success || !data.quotation?.items) {
-      console.error("❌ Invalid JSON:", data);
-      alert("No items found for this quotation.");
-      return;
-    }
+    if (!data.success || !data.quotation?.items)
+      throw new Error("No items found for this quotation.");
 
     const quotation: Quotation = data.quotation;
     const items = quotation.items || [];
 
-    // === Fetch Inventory (for better item display) ===
+    // === Fetch inventory for descriptive names ===
     const inventoryRes = await fetch("/api/inventory");
-    if (!inventoryRes.ok) {
-      console.error("❌ Failed to fetch inventory:", await inventoryRes.text());
-      alert("Failed to fetch inventory data for PDF.");
-      return;
-    }
+    if (!inventoryRes.ok) throw new Error(await inventoryRes.text());
 
     const inventoryData = await inventoryRes.json();
     const inventoryItems = inventoryData.success
@@ -240,83 +42,78 @@ export const generateInvoicePDF = async (quotationId: string) => {
 
     const getDisplayItem = (itemName: string) => {
       const invItem = inventoryItems.find((inv: any) => inv.name === itemName);
-      if (invItem) {
-        if (invItem.type.toLowerCase().includes("pillar")) {
-          return `${invItem.type} ${invItem.size || ""}${
-            invItem.gote &&
-            invItem.gote.trim() !== "" &&
-            invItem.gote.toLowerCase() !== "without gote"
-              ? invItem.gote
-              : ""
-          } - ${invItem.guage || ""}`.trim();
-        } else if (invItem.type.toLowerCase() === "hardware") {
-          return `${invItem.name} ${invItem.size || ""}${
-            invItem.color && invItem.color.trim() !== "" ? invItem.color : ""
-          }`.trim();
-        } else {
-          return `${invItem.type}${invItem.size || ""}${
-            invItem.guage || ""
-          }`.trim();
-        }
-      }
-      return itemName;
+      if (!invItem) return itemName;
+      if (invItem.type.toLowerCase().includes("pillar"))
+        return `${invItem.type} ${invItem.size || ""}${
+          invItem.gote &&
+          invItem.gote.trim() !== "" &&
+          invItem.gote.toLowerCase() !== "without gote"
+            ? invItem.gote
+            : ""
+        } - ${invItem.guage || ""}`.trim();
+      if (invItem.type.toLowerCase() === "hardware")
+        return `${invItem.name} ${invItem.size || ""}${
+          invItem.color && invItem.color.trim() !== "" ? invItem.color : ""
+        }`.trim();
+      return `${invItem.type}${invItem.size || ""}${
+        invItem.guage || ""
+      }`.trim();
     };
 
-    // === Page Setup (80mm Thermal) ===
-    const pageWidth = 226.77; // 80mm
-    const pageHeight = 566.93; // ~200mm
-    const printableWidth = 178.58; // 63mm
-    const leftMargin = (pageWidth - printableWidth) / 2;
-    const rightMargin = leftMargin;
+    // === Page setup (A4-half/A5) ===
+    const pageWidth = 419.53; // 148 mm
+    const pageHeight = 595.28; // 210 mm
+    const printableWidth = 368.5; // ~130 mm content width
+    const marginX = (pageWidth - printableWidth) / 2; // ≈25 pt (~9 mm) margins
+    const rightX = marginX + printableWidth;
 
     const doc = new jsPDF({
       unit: "pt",
       format: [pageWidth, pageHeight],
     });
 
-    const rightX = pageWidth - rightMargin;
-
-    // === Helper: Add Header (on each page) ===
+    // === Header generator ===
     const addHeader = (pageNum: number) => {
-      const brandY = 30;
-      doc.setFontSize(13).setFont("helvetica", "bold").setTextColor(0, 0, 0);
-      doc.text("Taha", leftMargin, brandY);
-      const tahaWidth = (doc as any).getTextWidth("Taha");
-      doc.text("Metals", leftMargin + tahaWidth + 6, brandY);
+      const y = 50;
 
-      doc.setFontSize(9).setFont("helvetica", "normal");
-      doc.text("Invoice / Quotation", leftMargin, brandY + 12);
+      doc.setFont("helvetica", "bold").setFontSize(13);
+      doc.text("Taha Metals", marginX, y);
 
-      const today = new Date(quotation.date).toLocaleDateString();
-      doc
-        .setFontSize(8)
-        .text(`Date: ${today}`, rightX, brandY, { align: "right" });
+      doc.setFont("helvetica", "normal").setFontSize(8);
+      doc.text("Invoice / Quotation", marginX, y + 14);
+
+      const dateStr = new Date(quotation.date).toLocaleDateString();
+      doc.text(`Date: ${dateStr}`, rightX, y, { align: "right" });
 
       const idSuffix = pageNum > 1 ? ` (${pageNum})` : "";
-      if (quotation.quotationId) {
+      if (quotation.quotationId)
         doc
-          .setFontSize(8)
           .setFont("helvetica", "bold")
-          .setTextColor(100)
+          .setFontSize(8)
+          .setTextColor(107, 114, 128)
           .text(
             `Quotation ID: ${quotation.quotationId}${idSuffix}`,
             rightX,
-            brandY + 10,
+            y + 12,
             { align: "right" }
           )
-          .setTextColor(0);
-      }
+          .setTextColor(0, 0, 0);
     };
 
-    // === Helper: Add Footer (on each page) ===
+    // === Footer generator ===
     const addFooter = () => {
       doc
         .setFont("helvetica", "normal")
         .setFontSize(8)
-        .text("Thank you for purchasing!", leftMargin, pageHeight - 25);
+        .text(
+          "Thank you for purchasing!",
+          marginX + printableWidth / 2,
+          pageHeight - 25,
+          { align: "center" }
+        );
     };
 
-    // === Table Head / Body ===
+    // === Table data ===
     const head = [["Qty", "Item", "Guage", "Weight", "Rate", "Amount"]];
     const body = items.map((r: any) => [
       String(r.qty),
@@ -327,87 +124,92 @@ export const generateInvoicePDF = async (quotationId: string) => {
       Number(r.amount).toLocaleString("en-US", { maximumFractionDigits: 2 }),
     ]);
 
-    // === Draw Table with Pagination ===
+    // === Render header for page 1 ===
     let pageNum = 1;
     addHeader(pageNum);
 
+    // === Create AutoTable ===
     (autoTable as any)(doc, {
       head,
       body,
-      startY: 70,
-      theme: "striped",
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [45, 55, 72], textColor: 255 },
-      margin: { left: leftMargin, right: rightMargin },
+      startY: 80,
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 3, lineColor: [220, 220, 220] },
+      headStyles: {
+        fillColor: [45, 55, 72],
+        textColor: 255,
+        fontSize: 7.5,
+        halign: "center",
+      },
+      columnStyles: {
+        0: { cellWidth: 25, halign: "center" },
+        1: { cellWidth: 120 },
+        2: { cellWidth: 35, halign: "center" },
+        3: { cellWidth: 45, halign: "right" },
+        4: { cellWidth: 45, halign: "right" },
+        5: { cellWidth: 45, halign: "right" },
+      },
+      margin: { left: marginX, right: marginX },
       tableWidth: printableWidth,
-      didDrawPage: (data: any) => {
+      didDrawPage: () => {
         addFooter();
-
-        if (pageNum < doc.getNumberOfPages()) {
-          pageNum++;
+        const totalPages = (doc as any).getNumberOfPages();
+        if (totalPages > pageNum) {
+          pageNum = totalPages;
           addHeader(pageNum);
         }
       },
     });
 
-    // === Totals Only on Last Page ===
-    doc.setPage(doc.getNumberOfPages());
-    let finalY = (doc as any).lastAutoTable.finalY + 10;
+    // === Totals section ===
+    doc.setPage((doc as any).getNumberOfPages());
+    let finalY = (doc as any).lastAutoTable.finalY + 25;
+    if (finalY + 120 > pageHeight) {
+      doc.addPage();
+      addHeader((doc as any).getNumberOfPages());
+      finalY = 80;
+    }
 
-    const paid =
-      quotation.payments?.reduce((sum: number, p: any) => sum + p.amount, 0) ||
-      0;
+    const paid = quotation.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
     const balance = quotation.grandTotal - paid;
+    const labelX = rightX - 120;
+    const gap = 14;
 
-    const labelX = leftMargin;
-    const valueX = rightX;
-    const lineGap = 11;
+    const drawRow = (label: string, value: number | string, bold = false) => {
+      doc.setFont("helvetica", bold ? "bold" : "normal").setFontSize(9);
+      doc.text(`${label}:`, labelX, finalY, { align: "left" });
+      doc.text(String(value), rightX, finalY, { align: "right" });
+      finalY += gap;
+    };
 
-    doc.setFontSize(8.5).setFont("helvetica", "normal");
-
-    doc.text(`Total:`, labelX, finalY);
-    doc.text(`${quotation.total.toLocaleString()}`, valueX, finalY, {
-      align: "right",
-    });
-    finalY += lineGap;
-
-    doc.text(`Discount:`, labelX, finalY);
-    doc.text(`${quotation.discount.toLocaleString()}`, valueX, finalY, {
-      align: "right",
-    });
-    finalY += lineGap;
-
+    drawRow("TOTAL", quotation.total.toLocaleString());
+    drawRow("DISCOUNT", quotation.discount.toLocaleString());
     if (
       quotation.hasOwnProperty("loading") &&
       quotation.loading !== undefined &&
       quotation.loading !== null
-    ) {
-      doc.text(`Loading:`, labelX, finalY);
-      doc.text(`${quotation.loading.toLocaleString()}`, valueX, finalY, {
-        align: "right",
-      });
-      finalY += lineGap;
-    }
+    )
+      drawRow("LOADING", quotation.loading.toLocaleString());
+    drawRow("PAID", paid.toLocaleString());
+    drawRow("BALANCE", balance.toLocaleString(), true);
+    drawRow("GRAND TOTAL", quotation.grandTotal.toLocaleString(), true);
 
-    doc.text(`Paid:`, labelX, finalY);
-    doc.text(`${paid.toLocaleString()}`, valueX, finalY, { align: "right" });
-    finalY += lineGap;
-
-    doc.setFont("helvetica", "bold");
-    doc.text(`Balance:`, labelX, finalY);
-    doc.text(`${balance.toLocaleString()}`, valueX, finalY, { align: "right" });
-    finalY += lineGap;
-
-    doc.text(`Grand Total:`, labelX, finalY);
-    doc.text(`${quotation.grandTotal.toLocaleString()}`, valueX, finalY, {
-      align: "right",
-    });
-
-    // === Save ===
+    // === Output ===
     const filename = `invoice_${quotation.quotationId || quotation._id}.pdf`;
-    doc.save(filename);
+    const pdfBlob = doc.output("blob");
+
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    const printWindow = window.open(blobUrl);
+    if (printWindow) {
+      printWindow.addEventListener("load", () => {
+        printWindow.focus();
+        printWindow.print();
+      });
+    } else {
+      alert("Please allow pop-ups to enable printing.");
+    }
   } catch (err) {
     console.error("❌ Error generating PDF:", err);
-    alert("❌ Failed to generate PDF");
+    alert("❌ Failed to generate PDF.");
   }
 };
