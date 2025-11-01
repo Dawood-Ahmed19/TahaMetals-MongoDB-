@@ -270,7 +270,7 @@ export const printInvoicePDF = async (quotationId: string) => {
 
       // Address (split into two lines for better alignment)
       doc.setFont("NotoNastaliqUrdu-Regular", "normal").setFontSize(9);
-      doc.text("Chow Road, Shahrah Kashmir", marginX + offsetX, topY + 14);
+      doc.text("Chowa Road, Shahrah Kashmir", marginX + offsetX, topY + 14);
       doc.text("Mureed Chowk, Kallar Syedan", marginX + offsetX, topY + 28);
 
       // Phone Number
@@ -369,13 +369,19 @@ export const printInvoicePDF = async (quotationId: string) => {
       drawRow("BALANCE", balance.toLocaleString());
       drawRow("GRAND TOTAL", quotation.grandTotal.toLocaleString(), true);
 
-      // === Footer (English text) ===
+      // === Footer (English text) on both sides ===
       const footerText = `After 30 days, products will not be returned or exchanged. Thank you. Apologies for any commission or billing errors. Please check your items and gauges before leaving the counter, as we will not be responsible for any issues after that. No warranty for rust.`;
       const footerMargin = 20; // Margin from bottom
+
+      // Left side footer
       doc.setFont("helvetica", "normal")
         .setFontSize(9)
         .text(footerText, marginX, pageHeight - footerMargin, { align: "left", maxWidth: printableWidth });
 
+      // Right side footer
+      doc.setFont("helvetica", "normal")
+        .setFontSize(9)
+        .text(footerText, offsetX + halfWidth, pageHeight - footerMargin, { align: "right", maxWidth: printableWidth });
     };
 
     // === Draw Separator Lines for Cutting ===
@@ -406,5 +412,6 @@ export const printInvoicePDF = async (quotationId: string) => {
     alert("❌ Failed to print invoice.");
   }
 };
+
 
 
