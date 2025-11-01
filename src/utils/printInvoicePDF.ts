@@ -256,8 +256,8 @@ export const printInvoicePDF = async (quotationId: string) => {
     });
 
     // Load the Urdu font (ensure the path is correct)
-    doc.addFileToVFS("NotoNastaliqUrdu.ttf", "/NotoNastaliq.ttf"); // Path to font file in the public folder
-    doc.setFont("NotoNastaliqUrdu"); // Set to Urdu font
+    doc.addFileToVFS("NotoNastaliqUrdu-Regular.ttf", "/NotoNastaliqUrdu-Regular.ttf"); // Path to the font file in the public folder
+    doc.setFont("NotoNastaliqUrdu-Regular"); // Set to the correct Urdu font name
 
     // === Header ===
     const drawHeader = (leftSide: boolean) => {
@@ -269,7 +269,7 @@ export const printInvoicePDF = async (quotationId: string) => {
       doc.text("Taha Metals", marginX + offsetX, topY);
 
       // Address (Urdu)
-      doc.setFont("NotoNastaliqUrdu", "normal").setFontSize(9);
+      doc.setFont("NotoNastaliqUrdu-Regular", "normal").setFontSize(9);
       doc.text("چوآ روڈ شاہراہ کشمیر مرید چوک کلر سیداں", marginX + offsetX, topY + 14);
 
       // Phone Number
@@ -370,7 +370,7 @@ export const printInvoicePDF = async (quotationId: string) => {
 
       // === Footer Urdu Sentence ===
       doc
-        .setFont("NotoNastaliqUrdu", "normal") // Use custom Urdu font
+        .setFont("NotoNastaliqUrdu-Regular", "normal") // Use custom Urdu font
         .setFontSize(10)
         .text(
           "دن بعد اور بغیر بل مال واپس یا تبدیل نہ ہوگا شکریہ ۔ ادھار کمیشن اور بلنگ سے معزرت۔ کاونٹر چھوڑنے سے پہلے اپنا سامان اور گیج اچھی طرح چیک کر لیں بعد میں ہم زمہ دار نہ ہونگے۔ زنگ کی کویؑ گارنٹی نہیں ہے۔",
@@ -408,5 +408,4 @@ export const printInvoicePDF = async (quotationId: string) => {
     alert("❌ Failed to print invoice.");
   }
 };
-
 
