@@ -268,9 +268,9 @@ export const printInvoicePDF = async (quotationId: string) => {
       doc.setFont("helvetica", "bold").setFontSize(13);
       doc.text("Taha Metals", marginX + offsetX, topY);
 
-      // Address (Urdu)
+      // Address (English)
       doc.setFont("NotoNastaliqUrdu-Regular", "normal").setFontSize(9);
-      doc.text("چوآ روڈ شاہراہ کشمیر مرید چوک کلر سیداں", marginX + offsetX, topY + 14);
+      doc.text("Chow Road, Shahrah Kashmir, Mureed Chowk, Kallar Syedan", marginX + offsetX, topY + 14);
 
       // Phone Number
       doc.setFont("helvetica", "normal").setFontSize(9);
@@ -368,12 +368,12 @@ export const printInvoicePDF = async (quotationId: string) => {
       drawRow("BALANCE", balance.toLocaleString());
       drawRow("GRAND TOTAL", quotation.grandTotal.toLocaleString(), true);
 
-      // === Footer Urdu Sentence ===
+      // === Footer (English text) ===
       doc
-        .setFont("NotoNastaliqUrdu-Regular", "normal") // Use custom Urdu font
+        .setFont("helvetica", "normal") // Use standard font for English text
         .setFontSize(10)
         .text(
-          "دن بعد اور بغیر بل مال واپس یا تبدیل نہ ہوگا شکریہ ۔ ادھار کمیشن اور بلنگ سے معزرت۔ کاونٹر چھوڑنے سے پہلے اپنا سامان اور گیج اچھی طرح چیک کر لیں بعد میں ہم زمہ دار نہ ہونگے۔ زنگ کی کویؑ گارنٹی نہیں ہے۔",
+          "After 30 days, products will not be returned or exchanged. Thank you. Apologies for any commission or billing errors. Please check your items and gauges before leaving the counter, as we will not be responsible for any issues after that. No warranty for rust.",
           offsetX + halfWidth / 2,
           pageHeight - 30,
           { align: "right", maxWidth: printableWidth }
@@ -408,4 +408,5 @@ export const printInvoicePDF = async (quotationId: string) => {
     alert("❌ Failed to print invoice.");
   }
 };
+
 
