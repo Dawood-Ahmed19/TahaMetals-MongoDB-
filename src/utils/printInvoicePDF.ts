@@ -268,13 +268,14 @@ export const printInvoicePDF = async (quotationId: string) => {
       doc.setFont("helvetica", "bold").setFontSize(13);
       doc.text("Taha Metals", marginX + offsetX, topY);
 
-      // Address (English)
+      // Address (split into two lines for better alignment)
       doc.setFont("NotoNastaliqUrdu-Regular", "normal").setFontSize(9);
-      doc.text("Chow Road, Shahrah Kashmir, Mureed Chowk, Kallar Syedan", marginX + offsetX, topY + 14);
+      doc.text("Chow Road, Shahrah Kashmir", marginX + offsetX, topY + 14);
+      doc.text("Mureed Chowk, Kallar Syedan", marginX + offsetX, topY + 28);
 
       // Phone Number
       doc.setFont("helvetica", "normal").setFontSize(9);
-      doc.text("03488416096", marginX + offsetX, topY + 28);
+      doc.text("03488416096", marginX + offsetX, topY + 42);
 
       const dateStr = new Date(quotation.date).toLocaleDateString();
       doc.text(`Date: ${dateStr}`, offsetX + halfWidth - marginX, topY, { align: "right" });
@@ -292,9 +293,9 @@ export const printInvoicePDF = async (quotationId: string) => {
         doc
           .setFont("helvetica", "bold")
           .setFontSize(9)
-          .text(`Customer: ${quotation.customerName}`, marginX + offsetX, topY + 44);
+          .text(`Customer: ${quotation.customerName}`, marginX + offsetX, topY + 56);
 
-      return topY + 56;
+      return topY + 68; // Adjusting for the address text length
     };
 
     // === Draw Invoice (Left or Right Side) ===
@@ -369,15 +370,12 @@ export const printInvoicePDF = async (quotationId: string) => {
       drawRow("GRAND TOTAL", quotation.grandTotal.toLocaleString(), true);
 
       // === Footer (English text) ===
-      doc
-        .setFont("helvetica", "normal") // Use standard font for English text
-        .setFontSize(10)
-        .text(
-          "After 30 days, products will not be returned or exchanged. Thank you. Apologies for any commission or billing errors. Please check your items and gauges before leaving the counter, as we will not be responsible for any issues after that. No warranty for rust.",
-          offsetX + halfWidth / 2,
-          pageHeight - 30,
-          { align: "right", maxWidth: printableWidth }
-        );
+      const footerText = `After 30 days, products will not be returned or exchanged. Thank you. Apologies for any commission or billing errors. Please check your items and gauges before leaving the counter, as we will not be responsible for any issues after that. No warranty for rust.`;
+      const footerMargin = 20; // Margin from bottom
+      doc.setFont("helvetica", "normal")
+        .setFontSize(9)
+        .text(footerText, marginX, pageHeight - footerMargin, { align: "left", maxWidth: printableWidth });
+
     };
 
     // === Draw Separator Lines for Cutting ===
@@ -408,6 +406,5 @@ export const printInvoicePDF = async (quotationId: string) => {
     alert("❌ Failed to print invoice.");
   }
 };
-
 
 
