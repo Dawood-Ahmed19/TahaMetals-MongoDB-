@@ -368,25 +368,30 @@ export const printInvoicePDF = async (quotationId: string) => {
       drawRow("BALANCE", balance.toLocaleString());
       drawRow("GRAND TOTAL", quotation.grandTotal.toLocaleString(), true);
 
-      // === Footer (Text on both sides, centered in left and right parts) ===
+      // === Footer (Text on both sides, only once) ===
       const footerText = `After 30 days, products will not be returned or exchanged. Thank you. Apologies for any commission or billing errors. Please check your items and gauges before leaving the counter, as we will not be responsible for any issues after that. No warranty for rust.`;
       const footerMargin = 20; // Margin from bottom
 
-      // Only display the footer once on each side
-      const footerX = marginX + printableWidth / 2; // Horizontal center of left invoice
-      doc.setFont("helvetica", "normal")
-        .setFontSize(9)
-        .text(footerText, footerX, pageHeight - footerMargin, { align: "center", maxWidth: printableWidth });
+      // Left side footer - Only for the left side page
+      if (leftSide) {
+        const footerX = marginX + printableWidth / 2; // Horizontal center of left invoice
+        doc.setFont("helvetica", "normal")
+          .setFontSize(9)
+          .text(footerText, footerX, pageHeight - footerMargin, { align: "center", maxWidth: printableWidth });
+      }
 
-      const footerXRight = offsetX + printableWidth / 2; // Horizontal center of right invoice
-      doc.setFont("helvetica", "normal")
-        .setFontSize(9)
-        .text(footerText, footerXRight, pageHeight - footerMargin, { align: "center", maxWidth: printableWidth });
+      // Right side footer - Only for the right side page
+      if (!leftSide) {
+        const footerXRight = offsetX + printableWidth / 2; // Horizontal center of right invoice
+        doc.setFont("helvetica", "normal")
+          .setFontSize(9)
+          .text(footerText, footerXRight, pageHeight - footerMargin, { align: "center", maxWidth: printableWidth });
+      }
     };
 
     // === Draw Both Invoices ===
-    drawInvoice(true);
-    drawInvoice(false);
+    drawInvoice(true); // Left invoice
+    drawInvoice(false); // Right invoice
 
     // === Print/View ===
     const pdfBlob = doc.output("blob");
