@@ -209,9 +209,15 @@
 //   }
 // };
 
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
+// You need to add the Urdu font to jsPDF by converting a font like "Noto Nastaliq Urdu" to a format jsPDF can use.
+// For this example, I am assuming the font file is added and accessible. You need to include the actual font file in your project.
+
+import "path_to_your_urdu_font";
+
+// Define your Payment and Quotation interfaces
 interface Payment {
   amount: number;
   date: string;
@@ -279,6 +285,10 @@ export const printInvoicePDF = async (quotationId: string) => {
       orientation: "landscape",
     });
 
+    // === Add custom Urdu font ===
+    doc.addFileToVFS("NotoNastaliqUrdu.ttf", "path_to_your_font_file"); // Ensure the font file is added properly
+    doc.setFont("NotoNastaliqUrdu"); // Set the font to the custom Urdu font
+
     // === Header ===
     const drawHeader = (leftSide: boolean) => {
       const offsetX = leftSide ? 0 : halfWidth;
@@ -289,7 +299,7 @@ export const printInvoicePDF = async (quotationId: string) => {
       doc.text("Taha Metals", marginX + offsetX, topY);
 
       // Address (Urdu)
-      doc.setFont("helvetica", "normal").setFontSize(9);
+      doc.setFont("NotoNastaliqUrdu", "normal").setFontSize(9);
       doc.text("چوآ روڈ شاہراہ کشمیر مرید چوک کلر سیداں", marginX + offsetX, topY + 14);
 
       // Phone Number
@@ -390,13 +400,13 @@ export const printInvoicePDF = async (quotationId: string) => {
 
       // === Footer Urdu Sentence ===
       doc
-        .setFont("helvetica", "normal")
+        .setFont("NotoNastaliqUrdu", "normal") // Use custom Urdu font
         .setFontSize(10)
         .text(
           "دن بعد اور بغیر بل مال واپس یا تبدیل نہ ہوگا شکریہ ۔ ادھار کمیشن اور بلنگ سے معزرت۔ کاونٹر چھوڑنے سے پہلے اپنا سامان اور گیج اچھی طرح چیک کر لیں بعد میں ہم زمہ دار نہ ہونگے۔ زنگ کی کویؑ گارنٹی نہیں ہے۔",
           offsetX + halfWidth / 2,
           pageHeight - 30,
-          { align: "center", maxWidth: printableWidth }
+          { align: "right", maxWidth: printableWidth }
         );
     };
 
@@ -428,3 +438,4 @@ export const printInvoicePDF = async (quotationId: string) => {
     alert("❌ Failed to print invoice.");
   }
 };
+
