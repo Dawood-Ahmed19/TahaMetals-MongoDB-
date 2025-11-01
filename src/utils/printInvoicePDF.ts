@@ -263,45 +263,40 @@ export const printInvoicePDF = async (quotationId: string) => {
         return `${invItem.name} ${invItem.size || ""}${
           invItem.color && invItem.color.trim() !== "" ? invItem.color : ""
         }`.trim();
-      return `${invItem.type}${invItem.size || ""}${
-        invItem.guage || ""
-      }`.trim();
+      return `${invItem.type}${invItem.size || ""}${invItem.guage || ""}`.trim();
     };
 
-    // === Page setup: Landscape A5 (419.53 x 595.28 points) ===
-    const pageWidth = 595.28; // 210 mm (A5 width)
-    const pageHeight = 419.53; // 148 mm (A5 height)
-    const marginX = 28; // ≈10 mm each side
-    const printableWidth = (pageWidth / 2) - marginX * 2; // Half of page width
-    const rightX = pageWidth / 2 + marginX;
+    // === A5 Landscape Setup ===
+    const pageWidth = 595.28; // 210 mm
+    const pageHeight = 419.53; // 148 mm
+    const marginX = 28;
+    const halfWidth = pageWidth / 2;
+    const printableWidth = halfWidth - marginX * 2;
 
     const doc = new jsPDF({
       unit: "pt",
       format: [pageWidth, pageHeight],
-      orientation: "landscape", // Set to landscape orientation
+      orientation: "landscape",
     });
 
-    // === Helper function to draw the header ===
-    const drawHeader = (pageNum?: number, leftSide: boolean = true) => {
-      const topMargin = 50;
-
-      const qid =
-        quotation.quotationId + (pageNum && pageNum > 1 ? ` (${pageNum})` : "");
+    const drawHeader = (leftSide: boolean) => {
+      const offsetX = leftSide ? 0 : halfWidth;
+      const topY = 40;
 
       doc.setFont("helvetica", "bold").setFontSize(13);
-      doc.text("Taha Metals", marginX + (leftSide ? 0 : pageWidth / 2), topMargin);
+      doc.text("Taha Metals", marginX + offsetX, topY);
 
       doc.setFont("helvetica", "normal").setFontSize(8);
-      doc.text("Invoice / Quotation", marginX + (leftSide ? 0 : pageWidth / 2), topMargin + 14);
+      doc.text("Invoice / Quotation", marginX + offsetX, topY + 14);
 
       const dateStr = new Date(quotation.date).toLocaleDateString();
-      doc.text(`Date: ${dateStr}`, rightX - (leftSide ? 0 : pageWidth / 2), topMargin, { align: "right" });
+      doc.text(`Date: ${dateStr}`, offsetX + halfWidth - marginX, topY, { align: "right" });
 
       doc
         .setFont("helvetica", "bold")
         .setFontSize(8)
         .setTextColor(107, 114, 128)
-        .text(`Quotation ID: ${qid}`, rightX - (leftSide ? 0 : pageWidth / 2), topMargin + 12, {
+        .text(`Quotation ID: ${quotation.quotationId}`, offsetX + halfWidth - marginX, topY + 12, {
           align: "right",
         })
         .setTextColor(0, 0, 0);
@@ -310,85 +305,95 @@ export const printInvoicePDF = async (quotationId: string) => {
         doc
           .setFont("helvetica", "bold")
           .setFontSize(9)
-          .text(`Customer: ${quotation.customerName}`, marginX + (leftSide ? 0 : pageWidth / 2), topMargin + 28);
+          .text(`Customer: ${quotation.customerName}`, marginX + offsetX, topY + 28);
 
-      return topMargin + 42;
+      return topY + 40;
     };
 
-    const drawSeparatorLine = (y: number) => {
-      doc.setLineWidth(0.5);
-      doc.line(marginX, y, pageWidth - marginX, y);
+    const drawInvoice = (leftSide: boolean) => {
+      const offsetX = leftSide ? 0 : halfWidth;
+      let startY = drawHeader(leftSide);
+
+      const head = [["Qty", "Item", "Guage", "Weight", "Rate", "Amount"]];
+      const body = items.map((r: any) => [
+        String(r.qty),
+        getDisplayItem(r.item),
+        r.guage || "",
+        Number(r.weight).toLocaleString("en-US", { maximumFractionDigits: 2 }),
+        Number(r.rate).toLocaleString("en-US"),
+        Number(r.amount).toLocaleString("en-US", { maximumFractionDigits: 2 }),
+      ]);
+
+      (autoTable as any)(doc, {
+        head,
+        body,
+        startY,
+        theme: "grid",
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+          lineColor: [220, 220, 220],
+        },
+        headStyles: {
+          fillColor: [45, 55, 72],
+          textColor: 255,
+          fontSize: 8,
+          halign: "center",
+        },
+        columnStyles: {
+          0: { halign: "center", cellWidth: printableWidth * 0.08 },
+          1: { halign: "left", cellWidth: printableWidth * 0.38 },
+          2: { halign: "center", cellWidth: printableWidth * 0.1 },
+          3: { halign: "right", cellWidth: printableWidth * 0.14 },
+          4: { halign: "right", cellWidth: printableWidth * 0.14 },
+          5: { halign: "right", cellWidth: printableWidth * 0.16 },
+        },
+        margin: { left: marginX + offsetX, right: marginX },
+        tableWidth: printableWidth,
+      });
+
+      let finalY = (doc as any).lastAutoTable.finalY + 15;
+      const paid =
+        quotation.payments?.reduce((sum: number, p: any) => sum + p.amount, 0) || 0;
+      const balance = quotation.grandTotal - paid;
+
+      const labelX = offsetX + halfWidth - marginX - 130;
+      const valueX = offsetX + halfWidth - marginX;
+
+      const drawRow = (label: string, value: number | string, bold = false) => {
+        doc.setFont("helvetica", bold ? "bold" : "normal").setFontSize(9);
+        doc.text(`${label}:`, labelX, finalY, { align: "left" });
+        doc.text(String(value), valueX, finalY, { align: "right" });
+        finalY += 14;
+      };
+
+      drawRow("TOTAL", quotation.total.toLocaleString());
+      drawRow("DISCOUNT", quotation.discount.toLocaleString());
+      drawRow("LOADING", (quotation.loading || 0).toLocaleString());
+      drawRow("BALANCE", balance.toLocaleString());
+      drawRow("GRAND TOTAL", quotation.grandTotal.toLocaleString(), true);
+
+      doc
+        .setFont("helvetica", "normal")
+        .setFontSize(8)
+        .text(
+          "Thank you for purchasing!",
+          offsetX + halfWidth / 2,
+          pageHeight - 30,
+          { align: "center" }
+        );
     };
 
-    let startY = drawHeader(1, true);
-    drawSeparatorLine(startY + 5);  // Line at top of left half
+    // === Draw Separator Lines for Cutting ===
+    doc.setDrawColor(150);
+    doc.setLineWidth(0.5);
+    doc.line(halfWidth, 20, halfWidth, pageHeight - 20); // vertical middle line
+    doc.line(20, 20, pageWidth - 20, 20); // top horizontal line
+    doc.line(20, pageHeight - 20, pageWidth - 20, pageHeight - 20); // bottom line
 
-    // === Table (on the left half of the page) ===
-    const head = [["Qty", "Item", "Guage", "Weight", "Rate", "Amount"]];
-    const body = items.map((r: any) => [
-      String(r.qty),
-      getDisplayItem(r.item),
-      r.guage || "",
-      Number(r.weight).toLocaleString("en-US", { maximumFractionDigits: 2 }),
-      Number(r.rate).toLocaleString("en-US"),
-      Number(r.amount).toLocaleString("en-US", { maximumFractionDigits: 2 }),
-    ]);
-
-    (autoTable as any)(doc, {
-      head,
-      body,
-      startY,
-      theme: "grid",
-      styles: {
-        fontSize: 8,
-        cellPadding: 3,
-        lineColor: [220, 220, 220],
-        overflow: "linebreak",
-      },
-      headStyles: {
-        fillColor: [45, 55, 72],
-        textColor: 255,
-        fontSize: 8,
-        halign: "center",
-        valign: "middle",
-      },
-      columnStyles: {
-        0: { halign: "center", cellWidth: printableWidth * 0.08 },
-        1: { halign: "left", cellWidth: printableWidth * 0.38 },
-        2: { halign: "center", cellWidth: printableWidth * 0.1 },
-        3: { halign: "right", cellWidth: printableWidth * 0.14 },
-        4: { halign: "right", cellWidth: printableWidth * 0.14 },
-        5: { halign: "right", cellWidth: printableWidth * 0.16 },
-      },
-      margin: { left: marginX, right: marginX },
-      tableWidth: printableWidth,
-      didDrawPage: (data: any) => {
-        if (data.pageNumber > 1) drawHeader(data.pageNumber);
-      },
-    });
-
-    // === Totals (on the left half of the page) ===
-    let finalY = (doc as any).lastAutoTable.finalY + 20;
-    drawRow("TOTAL", quotation.total.toLocaleString(), finalY, true);
-
-    // === Draw separator line after the first half ===
-    drawSeparatorLine(finalY + 10);  // Line at bottom of left half
-
-    // === Now print the second half (repeat the same content) ===
-    startY = drawHeader(1, false);
-    finalY = (doc as any).lastAutoTable.finalY + 20;
-    drawRow("TOTAL", quotation.total.toLocaleString(), finalY, true); // Repeat totals or any other data
-
-    // === Footer (same on both sides) ===
-    doc
-      .setFont("helvetica", "normal")
-      .setFontSize(8)
-      .text(
-        "Thank you for purchasing!",
-        marginX + printableWidth / 2,
-        pageHeight - 30,
-        { align: "center" }
-      );
+    // === Draw Two Copies ===
+    drawInvoice(true);  // Left side
+    drawInvoice(false); // Right side
 
     // === Print / view ===
     const pdfBlob = doc.output("blob");
@@ -403,4 +408,7 @@ export const printInvoicePDF = async (quotationId: string) => {
       alert("Please allow pop-ups to enable printing.");
     }
   } catch (err) {
-    console.error("
+    console.error("❌ Error printing invoice:", err);
+    alert("❌ Failed to print invoice.");
+  }
+};
