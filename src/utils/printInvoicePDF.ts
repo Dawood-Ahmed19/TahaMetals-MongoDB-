@@ -279,15 +279,22 @@ export const printInvoicePDF = async (quotationId: string) => {
       orientation: "landscape",
     });
 
+    // === Header ===
     const drawHeader = (leftSide: boolean) => {
       const offsetX = leftSide ? 0 : halfWidth;
       const topY = 40;
 
+      // Company Name
       doc.setFont("helvetica", "bold").setFontSize(13);
       doc.text("Taha Metals", marginX + offsetX, topY);
 
-      doc.setFont("helvetica", "normal").setFontSize(8);
-      doc.text("Invoice / Quotation", marginX + offsetX, topY + 14);
+      // Address (Urdu)
+      doc.setFont("helvetica", "normal").setFontSize(9);
+      doc.text("چوآ روڈ شاہراہ کشمیر مرید چوک کلر سیداں", marginX + offsetX, topY + 14);
+
+      // Phone Number
+      doc.setFont("helvetica", "normal").setFontSize(9);
+      doc.text("03488416096", marginX + offsetX, topY + 28);
 
       const dateStr = new Date(quotation.date).toLocaleDateString();
       doc.text(`Date: ${dateStr}`, offsetX + halfWidth - marginX, topY, { align: "right" });
@@ -305,11 +312,12 @@ export const printInvoicePDF = async (quotationId: string) => {
         doc
           .setFont("helvetica", "bold")
           .setFontSize(9)
-          .text(`Customer: ${quotation.customerName}`, marginX + offsetX, topY + 28);
+          .text(`Customer: ${quotation.customerName}`, marginX + offsetX, topY + 44);
 
-      return topY + 40;
+      return topY + 56;
     };
 
+    // === Draw Invoice (Left or Right Side) ===
     const drawInvoice = (leftSide: boolean) => {
       const offsetX = leftSide ? 0 : halfWidth;
       let startY = drawHeader(leftSide);
@@ -332,13 +340,20 @@ export const printInvoicePDF = async (quotationId: string) => {
         styles: {
           fontSize: 8,
           cellPadding: 3,
-          lineColor: [220, 220, 220],
+          lineColor: [100, 100, 100], // darker border lines
+          lineWidth: 0.3,
+          textColor: [0, 0, 0],
         },
         headStyles: {
-          fillColor: [45, 55, 72],
-          textColor: 255,
-          fontSize: 8,
-          halign: "center",
+          fillColor: [255, 255, 255], // white background
+          textColor: [0, 0, 0], // normal black text
+          fontStyle: "bold",
+          lineColor: [100, 100, 100],
+          lineWidth: 0.4,
+        },
+        bodyStyles: {
+          fillColor: [255, 255, 255],
+          textColor: [0, 0, 0],
         },
         columnStyles: {
           0: { halign: "center", cellWidth: printableWidth * 0.08 },
@@ -361,10 +376,10 @@ export const printInvoicePDF = async (quotationId: string) => {
       const valueX = offsetX + halfWidth - marginX;
 
       const drawRow = (label: string, value: number | string, bold = false) => {
-        doc.setFont("helvetica", bold ? "bold" : "normal").setFontSize(9);
+        doc.setFont("helvetica", bold ? "bold" : "normal").setFontSize(8);
         doc.text(`${label}:`, labelX, finalY, { align: "left" });
         doc.text(String(value), valueX, finalY, { align: "right" });
-        finalY += 14;
+        finalY += 12;
       };
 
       drawRow("TOTAL", quotation.total.toLocaleString());
@@ -373,29 +388,30 @@ export const printInvoicePDF = async (quotationId: string) => {
       drawRow("BALANCE", balance.toLocaleString());
       drawRow("GRAND TOTAL", quotation.grandTotal.toLocaleString(), true);
 
+      // === Footer Urdu Sentence ===
       doc
         .setFont("helvetica", "normal")
-        .setFontSize(8)
+        .setFontSize(10)
         .text(
-          "Thank you for purchasing!",
+          "دن بعد اور بغیر بل مال واپس یا تبدیل نہ ہوگا شکریہ ۔ ادھار کمیشن اور بلنگ سے معزرت۔ کاونٹر چھوڑنے سے پہلے اپنا سامان اور گیج اچھی طرح چیک کر لیں بعد میں ہم زمہ دار نہ ہونگے۔ زنگ کی کویؑ گارنٹی نہیں ہے۔",
           offsetX + halfWidth / 2,
           pageHeight - 30,
-          { align: "center" }
+          { align: "center", maxWidth: printableWidth }
         );
     };
 
     // === Draw Separator Lines for Cutting ===
-    doc.setDrawColor(150);
-    doc.setLineWidth(0.5);
-    doc.line(halfWidth, 20, halfWidth, pageHeight - 20); // vertical middle line
-    doc.line(20, 20, pageWidth - 20, 20); // top horizontal line
-    doc.line(20, pageHeight - 20, pageWidth - 20, pageHeight - 20); // bottom line
+    doc.setDrawColor(120);
+    doc.setLineWidth(0.7);
+    doc.line(halfWidth, 20, halfWidth, pageHeight - 20); // middle vertical
+    doc.line(20, 20, pageWidth - 20, 20); // top
+    doc.line(20, pageHeight - 20, pageWidth - 20, pageHeight - 20); // bottom
 
-    // === Draw Two Copies ===
-    drawInvoice(true);  // Left side
-    drawInvoice(false); // Right side
+    // === Draw Both Invoices ===
+    drawInvoice(true);
+    drawInvoice(false);
 
-    // === Print / view ===
+    // === Print/View ===
     const pdfBlob = doc.output("blob");
     const blobUrl = URL.createObjectURL(pdfBlob);
     const printWindow = window.open(blobUrl);
