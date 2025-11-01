@@ -369,15 +369,19 @@ export const printInvoicePDF = async (quotationId: string) => {
       drawRow("BALANCE", balance.toLocaleString());
       drawRow("GRAND TOTAL", quotation.grandTotal.toLocaleString(), true);
 
-      // === Footer (Centered Text) ===
+      // === Footer (Text on both sides, horizontally centered in left and right parts) ===
       const footerText = `After 30 days, products will not be returned or exchanged. Thank you. Apologies for any commission or billing errors. Please check your items and gauges before leaving the counter, as we will not be responsible for any issues after that. No warranty for rust.`;
       const footerMargin = 20; // Margin from bottom
 
-      // Center the footer text
-      const footerX = pageWidth / 2; // Center of the page
+      // Left side footer - horizontally centered in the left side
       doc.setFont("helvetica", "normal")
         .setFontSize(9)
-        .text(footerText, footerX, pageHeight - footerMargin, { align: "center", maxWidth: printableWidth });
+        .text(footerText, marginX + printableWidth / 2, pageHeight - footerMargin, { align: "center", maxWidth: printableWidth });
+
+      // Right side footer - horizontally centered in the right side
+      doc.setFont("helvetica", "normal")
+        .setFontSize(9)
+        .text(footerText, offsetX + printableWidth / 2, pageHeight - footerMargin, { align: "center", maxWidth: printableWidth });
     };
 
     // === Draw Both Invoices ===
