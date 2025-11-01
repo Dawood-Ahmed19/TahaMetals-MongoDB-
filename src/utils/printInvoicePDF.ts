@@ -270,7 +270,7 @@ export const printInvoicePDF = async (quotationId: string) => {
 
       // Address (split into two lines for better alignment)
       doc.setFont("NotoNastaliqUrdu-Regular", "normal").setFontSize(9);
-      doc.text("Chowa Road, Shahrah Kashmir", marginX + offsetX, topY + 14);
+      doc.text("Chow Road, Shahrah Kashmir", marginX + offsetX, topY + 14);
       doc.text("Mureed Chowk, Kallar Syedan", marginX + offsetX, topY + 28);
 
       // Phone Number
@@ -369,27 +369,16 @@ export const printInvoicePDF = async (quotationId: string) => {
       drawRow("BALANCE", balance.toLocaleString());
       drawRow("GRAND TOTAL", quotation.grandTotal.toLocaleString(), true);
 
-      // === Footer (English text) on both sides ===
+      // === Footer (Centered Text) ===
       const footerText = `After 30 days, products will not be returned or exchanged. Thank you. Apologies for any commission or billing errors. Please check your items and gauges before leaving the counter, as we will not be responsible for any issues after that. No warranty for rust.`;
       const footerMargin = 20; // Margin from bottom
 
-      // Left side footer
+      // Center the footer text
+      const footerX = pageWidth / 2; // Center of the page
       doc.setFont("helvetica", "normal")
         .setFontSize(9)
-        .text(footerText, marginX, pageHeight - footerMargin, { align: "left", maxWidth: printableWidth });
-
-      // Right side footer
-      doc.setFont("helvetica", "normal")
-        .setFontSize(9)
-        .text(footerText, offsetX + halfWidth, pageHeight - footerMargin, { align: "right", maxWidth: printableWidth });
+        .text(footerText, footerX, pageHeight - footerMargin, { align: "center", maxWidth: printableWidth });
     };
-
-    // === Draw Separator Lines for Cutting ===
-    doc.setDrawColor(120);
-    doc.setLineWidth(0.7);
-    doc.line(halfWidth, 20, halfWidth, pageHeight - 20); // middle vertical
-    doc.line(20, 20, pageWidth - 20, 20); // top
-    doc.line(20, pageHeight - 20, pageWidth - 20, pageHeight - 20); // bottom
 
     // === Draw Both Invoices ===
     drawInvoice(true);
@@ -412,6 +401,7 @@ export const printInvoicePDF = async (quotationId: string) => {
     alert("❌ Failed to print invoice.");
   }
 };
+
 
 
 
