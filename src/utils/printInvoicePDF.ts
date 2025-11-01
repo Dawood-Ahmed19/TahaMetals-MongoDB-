@@ -255,9 +255,8 @@ export const printInvoicePDF = async (quotationId: string) => {
       orientation: "landscape",
     });
 
-    // Load the Urdu font (ensure the path is correct)
-    doc.addFileToVFS("NotoNastaliqUrdu-Regular.ttf", "/NotoNastaliqUrdu-Regular.ttf"); // Path to the font file in the public folder
-    doc.setFont("NotoNastaliqUrdu-Regular"); // Set to the correct Urdu font name
+    // Use the default font (Helvetica) for the entire document
+    doc.setFont("helvetica");
 
     // === Header ===
     const drawHeader = (leftSide: boolean) => {
@@ -269,7 +268,7 @@ export const printInvoicePDF = async (quotationId: string) => {
       doc.text("Taha Metals", marginX + offsetX, topY);
 
       // Address (split into two lines for better alignment)
-      doc.setFont("NotoNastaliqUrdu-Regular", "normal").setFontSize(9);
+      doc.setFont("helvetica", "normal").setFontSize(9);
       doc.text("Chow Road, Shahrah Kashmir", marginX + offsetX, topY + 14);
       doc.text("Mureed Chowk, Kallar Syedan", marginX + offsetX, topY + 28);
 
@@ -405,6 +404,7 @@ export const printInvoicePDF = async (quotationId: string) => {
     alert("❌ Failed to print invoice.");
   }
 };
+
 
 
 
