@@ -212,12 +212,6 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// You need to add the Urdu font to jsPDF by converting a font like "Noto Nastaliq Urdu" to a format jsPDF can use.
-// For this example, I am assuming the font file is added and accessible. You need to include the actual font file in your project.
-
-import "path_to_your_urdu_font";
-
-// Define your Payment and Quotation interfaces
 interface Payment {
   amount: number;
   date: string;
@@ -248,30 +242,6 @@ export const printInvoicePDF = async (quotationId: string) => {
     const quotation: Quotation = data.quotation;
     const items = quotation.items || [];
 
-    // === Fetch inventory ===
-    const invRes = await fetch("/api/inventory");
-    if (!invRes.ok) throw new Error(await invRes.text());
-    const invData = await invRes.json();
-    const invItems = invData.success ? invData.items || [] : [];
-
-    const getDisplayItem = (itemName: string) => {
-      const invItem = invItems.find((i: any) => i.name === itemName);
-      if (!invItem) return itemName;
-      if (invItem.type.toLowerCase().includes("pillar"))
-        return `${invItem.type} ${invItem.size || ""}${
-          invItem.gote &&
-          invItem.gote.trim() !== "" &&
-          invItem.gote.toLowerCase() !== "without gote"
-            ? invItem.gote
-            : ""
-        } - ${invItem.guage || ""}`.trim();
-      if (invItem.type.toLowerCase() === "hardware")
-        return `${invItem.name} ${invItem.size || ""}${
-          invItem.color && invItem.color.trim() !== "" ? invItem.color : ""
-        }`.trim();
-      return `${invItem.type}${invItem.size || ""}${invItem.guage || ""}`.trim();
-    };
-
     // === A5 Landscape Setup ===
     const pageWidth = 595.28; // 210 mm
     const pageHeight = 419.53; // 148 mm
@@ -285,9 +255,9 @@ export const printInvoicePDF = async (quotationId: string) => {
       orientation: "landscape",
     });
 
-    // === Add custom Urdu font ===
-    doc.addFileToVFS("NotoNastaliqUrdu.ttf", "path_to_your_font_file"); // Ensure the font file is added properly
-    doc.setFont("NotoNastaliqUrdu"); // Set the font to the custom Urdu font
+    // Load the Urdu font (ensure the path is correct)
+    doc.addFileToVFS("NotoNastaliqUrdu.ttf", "/fonts/NotoNastaliqUrdu.ttf"); // Path to your font in the public folder
+    doc.setFont("NotoNastaliqUrdu"); // Set to Urdu font
 
     // === Header ===
     const drawHeader = (leftSide: boolean) => {
@@ -335,7 +305,7 @@ export const printInvoicePDF = async (quotationId: string) => {
       const head = [["Qty", "Item", "Guage", "Weight", "Rate", "Amount"]];
       const body = items.map((r: any) => [
         String(r.qty),
-        getDisplayItem(r.item),
+        r.item,
         r.guage || "",
         Number(r.weight).toLocaleString("en-US", { maximumFractionDigits: 2 }),
         Number(r.rate).toLocaleString("en-US"),
