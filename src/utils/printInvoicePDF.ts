@@ -256,7 +256,7 @@ export const printInvoicePDF = async (quotationId: string) => {
     });
 
     // Load the Urdu font (ensure the path is correct)
-    doc.addFileToVFS("NotoNastaliqUrdu.ttf", "/fonts/NotoNastaliqUrdu.ttf"); // Path to your font in the public folder
+    doc.addFileToVFS("NotoNastaliqUrdu.ttf", "/NotoNastaliq.ttf"); // Path to font file in the public folder
     doc.setFont("NotoNastaliqUrdu"); // Set to Urdu font
 
     // === Header ===
@@ -408,4 +408,5 @@ export const printInvoicePDF = async (quotationId: string) => {
     alert("❌ Failed to print invoice.");
   }
 };
+
 
