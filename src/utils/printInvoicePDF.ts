@@ -306,7 +306,7 @@ export const printInvoicePDF = async (quotationId: string) => {
       const body = items.map((r: any) => [
         String(r.qty),
         r.item,
-        r.guage || "",
+        r.guage || "", // Ensure gauge data is added here
         Number(r.weight).toLocaleString("en-US", { maximumFractionDigits: 2 }),
         Number(r.rate).toLocaleString("en-US"),
         Number(r.amount).toLocaleString("en-US", { maximumFractionDigits: 2 }),
@@ -336,12 +336,12 @@ export const printInvoicePDF = async (quotationId: string) => {
           textColor: [0, 0, 0],
         },
         columnStyles: {
-          0: { halign: "center", cellWidth: printableWidth * 0.08 },
-          1: { halign: "left", cellWidth: printableWidth * 0.38 },
-          2: { halign: "center", cellWidth: printableWidth * 0.1 },
-          3: { halign: "right", cellWidth: printableWidth * 0.14 },
-          4: { halign: "right", cellWidth: printableWidth * 0.14 },
-          5: { halign: "right", cellWidth: printableWidth * 0.16 },
+          0: { halign: "center", cellWidth: printableWidth * 0.08 }, // Qty
+          1: { halign: "left", cellWidth: printableWidth * 0.38 }, // Item
+          2: { halign: "center", cellWidth: printableWidth * 0.15 }, // Increased Guage width
+          3: { halign: "right", cellWidth: printableWidth * 0.14 }, // Weight
+          4: { halign: "right", cellWidth: printableWidth * 0.14 }, // Rate
+          5: { halign: "right", cellWidth: printableWidth * 0.16 }, // Amount
         },
         margin: { left: marginX + offsetX, right: marginX },
         tableWidth: printableWidth,
@@ -408,5 +408,6 @@ export const printInvoicePDF = async (quotationId: string) => {
     alert("❌ Failed to print invoice.");
   }
 };
+
 
 
