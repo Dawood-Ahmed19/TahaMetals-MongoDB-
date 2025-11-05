@@ -1,8 +1,19 @@
-import mongoose, { Schema, models } from "mongoose";
+import mongoose, { Schema, model, models, Model, Document } from "mongoose";
 
-const expenseSchema = new Schema(
+interface ExpenseEntry {
+  date: string;
+  description: string;
+  amount: number;
+}
+
+interface Expense extends Document {
+  month: string;
+  entries: ExpenseEntry[];
+}
+
+const expenseSchema = new Schema<Expense>(
   {
-    month: { type: String, required: true }, // "2025-09"
+    month: { type: String, required: true },
     entries: [
       {
         date: { type: String, required: true },
@@ -14,4 +25,7 @@ const expenseSchema = new Schema(
   { timestamps: true }
 );
 
-export default models.Expense || mongoose.model("Expense", expenseSchema);
+const ExpenseModel: Model<Expense> =
+  models.Expense || model<Expense>("Expense", expenseSchema);
+
+export default ExpenseModel;
