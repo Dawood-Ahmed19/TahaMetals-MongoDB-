@@ -51,16 +51,12 @@ export const printInvoicePDF = async (quotationId: string) => {
       const offsetX = leftSide ? 0 : halfWidth;
 
       doc.setFont("helvetica", "bold").setFontSize(13);
-      doc.text("Makkah Metals", marginX + offsetX, topY);
+      doc.text("Taha Metals", marginX + offsetX, topY);
 
       doc.setFont("helvetica", "normal").setFontSize(9);
       doc.text("Choha Road, Shahrah e Kashmir", marginX + offsetX, topY + 14);
       doc.text("Mureed Chowk, Kallar Syedan", marginX + offsetX, topY + 28);
-      doc.text(
-        "Cell: 0348-8416096 , 0302-5251026",
-        marginX + offsetX,
-        topY + 42
-      );
+      doc.text("Cell: 0348-8416096", marginX + offsetX, topY + 42);
 
       const dateStr = new Date(quotation.date).toLocaleDateString();
       doc.text(`Date: ${dateStr}`, offsetX + halfWidth - marginX, topY, {
