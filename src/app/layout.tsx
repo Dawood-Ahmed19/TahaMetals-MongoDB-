@@ -23,6 +23,10 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.png" />
         <meta name="theme-color" content="#2563eb" />
         <link rel="manifest" href="/manifest.json" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Urdu&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body className="bg-BgColor font-poppins">
         <StartupModal />

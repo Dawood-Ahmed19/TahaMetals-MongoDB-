@@ -51,30 +51,43 @@ export const printInvoicePDF = async (quotationId: string) => {
       const offsetX = leftSide ? 0 : halfWidth;
 
       doc.setFont("helvetica", "bold").setFontSize(13);
-      doc.text("Taha Metals", marginX + offsetX, topY);
+      doc.text("Makkah Metals", marginX + offsetX, topY);
 
       doc.setFont("helvetica", "normal").setFontSize(9);
-      doc.text("Chow Road, Shahrah Kashmir", marginX + offsetX, topY + 14);
+      doc.text("Choha Road, Shahrah e Kashmir", marginX + offsetX, topY + 14);
       doc.text("Mureed Chowk, Kallar Syedan", marginX + offsetX, topY + 28);
-      doc.text("03488416096", marginX + offsetX, topY + 42);
+      doc.text(
+        "Cell: 0348-8416096 , 0302-5251026",
+        marginX + offsetX,
+        topY + 42
+      );
 
       const dateStr = new Date(quotation.date).toLocaleDateString();
-      doc.text(`Date: ${dateStr}`, offsetX + halfWidth - marginX, topY, { align: "right" });
+      doc.text(`Date: ${dateStr}`, offsetX + halfWidth - marginX, topY, {
+        align: "right",
+      });
 
       doc
         .setFont("helvetica", "bold")
         .setFontSize(8)
         .setTextColor(107, 114, 128)
-        .text(`Quotation ID: ${quotation.quotationId}`, offsetX + halfWidth - marginX, topY + 12, {
-          align: "right",
-        })
+        .text(
+          `Quotation ID: ${quotation.quotationId}`,
+          offsetX + halfWidth - marginX,
+          topY + 12,
+          { align: "right" }
+        )
         .setTextColor(0, 0, 0);
 
       if (quotation.customerName)
         doc
           .setFont("helvetica", "bold")
           .setFontSize(9)
-          .text(`Customer: ${quotation.customerName}`, marginX + offsetX, topY + 56);
+          .text(
+            `Customer: ${quotation.customerName}`,
+            marginX + offsetX,
+            topY + 56
+          );
 
       return topY + 68;
     };
@@ -83,7 +96,7 @@ export const printInvoicePDF = async (quotationId: string) => {
     const drawInvoice = (leftSide: boolean) => {
       const offsetX = leftSide ? 0 : halfWidth;
 
-      const estimatedInvoiceHeight = 400; // adjust if needed
+      const estimatedInvoiceHeight = 400;
       const verticalPadding = (pageHeight - estimatedInvoiceHeight) / 2;
       let startY = verticalPadding + 10;
       startY = drawHeader(leftSide, startY);
@@ -134,7 +147,8 @@ export const printInvoicePDF = async (quotationId: string) => {
       });
 
       let finalY = (doc as any).lastAutoTable.finalY + 15;
-      const paid = quotation.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+      const paid =
+        quotation.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
       const balance = quotation.grandTotal - paid;
 
       const labelX = offsetX + halfWidth - marginX - 130;
@@ -153,22 +167,37 @@ export const printInvoicePDF = async (quotationId: string) => {
       drawRow("BALANCE", balance.toLocaleString());
       drawRow("GRAND TOTAL", quotation.grandTotal.toLocaleString(), true);
 
-      // === Footer ===
-      const footerText =
-        "After 30 days, products will not be returned or exchanged. Thank you. Apologies for any commission or billing errors. Please check your items and gauges before leaving the counter, as we will not be responsible for any issues after that. No warranty for rust.";
+      // === Urdu Footer Image (replace text footer) ===
+      const footerY = pageHeight - 60; // adjust if needed
+      const footerHeight = 40;
+      const footerWidth = printableWidth;
+      const footerX = offsetX + marginX;
 
-      const footerMarginBottom = 40;
-      const footerMaxWidth = printableWidth - 20;
-      const footerX = offsetX + marginX + footerMaxWidth / 2;
-      const footerY = pageHeight - footerMarginBottom;
+      const urduFooter = new Image();
+      urduFooter.src = "/urduText.png"; // image in /public folder
 
-      doc
-        .setFont("helvetica", "normal")
-        .setFontSize(8)
-        .text(footerText, footerX, footerY, {
-          align: "center",
-          maxWidth: footerMaxWidth,
-        });
+      urduFooter.onload = () => {
+        doc.addImage(
+          urduFooter,
+          "PNG",
+          footerX,
+          footerY,
+          footerWidth,
+          footerHeight
+        );
+        // open print once image is drawn
+        const pdfBlob = doc.output("blob");
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const printWindow = window.open(blobUrl);
+        if (printWindow) {
+          printWindow.addEventListener("load", () => {
+            printWindow.focus();
+            printWindow.print();
+          });
+        } else {
+          alert("Please allow pop-ups to enable printing.");
+        }
+      };
     };
 
     // === Draw Both Invoices ===
@@ -178,33 +207,14 @@ export const printInvoicePDF = async (quotationId: string) => {
     // === Tear/Cut Line ===
     doc.setDrawColor(150);
     doc.setLineWidth(0.5);
-
-    // small marks at top & bottom center
     const markLength = 15;
     const centerX = halfWidth;
-    // top mark
     doc.line(centerX, 10, centerX, 10 + markLength);
-    // bottom mark
     doc.line(centerX, pageHeight - 10 - markLength, centerX, pageHeight - 10);
-
-    // optional hint text (tiny dashed line)
     doc.setLineDashPattern([2, 2], 0);
     doc.setDrawColor(180);
     doc.line(centerX, 25, centerX, pageHeight - 25);
     doc.setLineDashPattern([], 0);
-
-    // === Open for Printing ===
-    const pdfBlob = doc.output("blob");
-    const blobUrl = URL.createObjectURL(pdfBlob);
-    const printWindow = window.open(blobUrl);
-    if (printWindow) {
-      printWindow.addEventListener("load", () => {
-        printWindow.focus();
-        printWindow.print();
-      });
-    } else {
-      alert("Please allow pop-ups to enable printing.");
-    }
   } catch (err) {
     console.error("❌ Error printing invoice:", err);
     alert("❌ Failed to print invoice.");
