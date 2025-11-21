@@ -35,8 +35,11 @@ function normalizeItem(item: any): InventoryItem {
   const type = String(item.type ?? "")
     .trim()
     .toLowerCase();
+  const color = String(item.color ?? "")
+    .trim()
+    .toLowerCase();
 
-  const uniqueKey = `${name}_${size}_${guage}_${pipeType}`;
+  const uniqueKey = `${name}_${size}_${color}`;
 
   let pricePerKg =
     item.pricePerKg != null ? Math.round(Number(item.pricePerKg)) : null;
@@ -46,7 +49,6 @@ function normalizeItem(item: any): InventoryItem {
   const weight = Number(item.weight ?? 0);
   const quantity = Number(item.quantity ?? 0);
 
-  // Auto calculate pricePerUnit for pipes/pillars
   if (
     (!pricePerUnit || pricePerUnit === 0) &&
     pricePerKg &&
@@ -64,6 +66,7 @@ function normalizeItem(item: any): InventoryItem {
     guage,
     pipeType,
     type,
+    color,
     uniqueKey,
     pricePerKg,
     pricePerUnit,
@@ -128,7 +131,6 @@ export async function POST(req: Request) {
     const db = client.db("TahaMetals");
     const collection = db.collection<InventoryItem>("inventory");
 
-    // Check for existing item by uniqueKey
     const existingItem = await collection.findOne({
       uniqueKey: normalized.uniqueKey,
     });
